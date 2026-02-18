@@ -35,6 +35,7 @@ Route::middleware(['auth', 'mahasiswa'])->prefix('mahasiswa')->name('mahasiswa.'
     Route::get('/registrations/{registration}', [RegistrationController::class, 'show'])->name('registrations.show');
     Route::get('/registrations/{registration}/payment', [RegistrationController::class, 'uploadPayment'])->name('registrations.payment');
     Route::post('/registrations/{registration}/payment', [RegistrationController::class, 'storePayment'])->name('registrations.payment.store');
+    Route::get('/registrations/{registration}/card', [RegistrationController::class, 'card'])->name('registrations.card');
     Route::delete('/registrations/{registration}', [RegistrationController::class, 'cancel'])->name('registrations.cancel');
 });
 

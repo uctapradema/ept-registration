@@ -119,9 +119,12 @@
                                     </p>
                                 </div>
                                 <div>
-                                    <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Biaya</p>
-                                    <p class="font-medium text-sm sm:text-base text-gray-900 dark:text-white">
-                                        Rp {{ number_format($registration->examSchedule->price, 0, ',', '.') }}
+                                    <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Total Pembayaran</p>
+                                    <p class="font-bold text-sm sm:text-base text-green-600 dark:text-green-400">
+                                        Rp {{ number_format($registration->total_payment, 0, ',', '.') }}
+                                    </p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                                        (Harga: Rp {{ number_format($registration->examSchedule->price, 0, ',', '.') }} + Kode Unik: Rp {{ number_format($registration->unique_code, 0, ',', '.') }})
                                     </p>
                                 </div>
                             </div>
@@ -141,7 +144,8 @@
                                 <p class="text-xs sm:text-sm font-semibold text-blue-800 dark:text-blue-200 mb-2">Petunjuk Pembayaran:</p>
                                 <ul class="text-xs sm:text-sm text-blue-700 dark:text-blue-300 space-y-1">
                                     <li>Transfer: <strong>{{ $registration->examSchedule->bank_name ?? 'Bank BCA' }} {{ $registration->examSchedule->bank_account ?? '123-456-7890' }}</strong> a.n. <strong>{{ $registration->examSchedule->account_holder ?? 'EPT' }}</strong></li>
-                                    <li>Nominal: <strong>Rp {{ number_format($registration->examSchedule->price, 0, ',', '.') }}</strong></li>
+                                    <li>Nominal: <strong>Rp {{ number_format($registration->total_payment, 0, ',', '.') }}</strong></li>
+                                    <li class="text-xs text-blue-600 dark:text-blue-400">(Termasuk kode unik: Rp {{ number_format($registration->unique_code, 0, ',', '.') }})</li>
                                     <li>Keterangan: <strong>{{ $registration->registration_number }}</strong></li>
                                 </ul>
                             </div>
@@ -300,6 +304,13 @@
                                     class="inline-flex items-center justify-center px-3 sm:px-4 py-2.5 sm:py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs sm:text-sm text-white uppercase tracking-widest hover:bg-red-700 transition w-full sm:w-auto">
                                 Batalkan
                             </button>
+                        @endif
+
+                        @if($registration->status === 'verified')
+                            <a href="{{ route('mahasiswa.registrations.card', $registration) }}" target="_blank"
+                               class="inline-flex items-center justify-center px-3 sm:px-4 py-2.5 sm:py-2 bg-amber-600 border border-transparent rounded-md font-semibold text-xs sm:text-sm text-white uppercase tracking-widest hover:bg-amber-700 transition w-full sm:w-auto">
+                                Download Kartu Ujian
+                            </a>
                         @endif
                     </div>
                 </div>

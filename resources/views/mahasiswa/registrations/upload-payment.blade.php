@@ -44,8 +44,12 @@
                                 <p class="font-medium text-gray-900 dark:text-white">{{ $registration->examSchedule->exam_date->format('d F Y') }}</p>
                             </div>
                             <div>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">Biaya</p>
-                                <p class="font-bold text-indigo-600 dark:text-indigo-400">Rp {{ number_format($registration->examSchedule->price, 0, ',', '.') }}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Kode Unik</p>
+                                <p class="font-bold text-indigo-600 dark:text-indigo-400">+ Rp {{ number_format($registration->unique_code, 0, ',', '.') }}</p>
+                            </div>
+                            <div class="col-span-2">
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Total Pembayaran</p>
+                                <p class="font-bold text-xl text-green-600 dark:text-green-400">Rp {{ number_format($registration->total_payment, 0, ',', '.') }}</p>
                             </div>
                         </div>
                     </div>
@@ -55,7 +59,8 @@
                         <p class="text-xs sm:text-sm font-semibold text-blue-800 dark:text-blue-200 mb-2">Petunjuk Pembayaran:</p>
                         <ul class="text-xs sm:text-sm text-blue-700 dark:text-blue-300 space-y-1">
                             <li>Transfer: <strong>{{ $registration->examSchedule->bank_name ?? 'Bank BCA' }} {{ $registration->examSchedule->bank_account ?? '123-456-7890' }}</strong> a.n. <strong>{{ $registration->examSchedule->account_holder ?? 'EPT' }}</strong></li>
-                            <li>Nominal: <strong>Rp {{ number_format($registration->examSchedule->price, 0, ',', '.') }}</strong></li>
+                            <li>Nominal: <strong>Rp {{ number_format($registration->total_payment, 0, ',', '.') }}</strong></li>
+                            <li class="text-xs text-blue-600 dark:text-blue-400">(Termasuk kode unik: Rp {{ number_format($registration->unique_code, 0, ',', '.') }})</li>
                             <li>Keterangan: <strong>{{ $registration->registration_number }}</strong></li>
                         </ul>
                     </div>

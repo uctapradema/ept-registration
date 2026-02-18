@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Barryvdh\DomPDF\Facade\Pdf as PDF;
 
 class RegistrationController extends Controller
 {
@@ -84,12 +85,17 @@ class RegistrationController extends Controller
 
                 $paymentDeadlineHours = $schedule->payment_deadline_hours ?? 24;
 
+                $minCode = $schedule->unique_code_min ?? 100;
+                $maxCode = $schedule->unique_code_max ?? 999;
+                $uniqueCode = rand($minCode, $maxCode);
+
                 return Registration::create([
                     'user_id' => $user->id,
                     'exam_schedule_id' => $schedule->id,
                     'registration_number' => $registrationNumber,
                     'status' => 'pending_payment',
                     'expires_at' => now()->addHours($paymentDeadlineHours),
+                    'unique_code' => $uniqueCode,
                 ]);
             });
 
@@ -286,5 +292,31 @@ class RegistrationController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
+    }
+
+    public function card(Registration $registration)
+    {
+        $user = Auth::user();
+        
+        if ($registration->user_id !== $user->id) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        if ($registration->status !== 'verified') {
+            return redirect()->route('mahasiswa.registrations.show', $registration)
+                ->with('error', 'Kartu ujian hanya tersedia untuk pendaftaran yang telah terverifikasi.');
+        }
+
+        $registration->load('examSchedule', 'user');
+
+        $pdf = app('dompdf.wrapper')->loadView('mahasiswa.registrations.card', [
+            'registration' => $registration,
+        ]);
+
+        $pdf->setPaper('A5', 'landscape');
+
+        $filename = 'kartu-ujian-' . str_replace('/', '-', $registration->registration_number) . '.pdf';
+        
+        return $pdf->stream($filename);
     }
 }

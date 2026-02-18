@@ -21,6 +21,8 @@ class RegistrationResource extends Resource
 
     protected static ?string $navigationLabel = 'Pendaftaran';
 
+    protected static ?string $navigationGroup = 'Manajemen Ujian';
+
     protected static ?string $modelLabel = 'Pendaftaran';
 
     protected static ?string $pluralModelLabel = 'Pendaftaran';

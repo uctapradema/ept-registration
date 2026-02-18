@@ -24,6 +24,7 @@ class Registration extends Model
         'verified_by',
         'rejection_reason',
         'expires_at',
+        'unique_code',
     ];
 
     protected function casts(): array
@@ -62,5 +63,11 @@ class Registration extends Model
             'awaiting_verification',
             'verified',
         ]);
+    }
+
+    public function getTotalPaymentAttribute(): int
+    {
+        $price = $this->examSchedule->price ?? 0;
+        return $price + ($this->unique_code ?? 0);
     }
 }

@@ -19,6 +19,8 @@ class ExamScheduleResource extends Resource
 
     protected static ?string $navigationLabel = 'Jadwal Ujian';
 
+    protected static ?string $navigationGroup = 'Manajemen Ujian';
+
     protected static ?string $modelLabel = 'Jadwal Ujian';
 
     protected static ?string $pluralModelLabel = 'Jadwal Ujian';
@@ -83,6 +85,26 @@ class ExamScheduleResource extends Resource
                             ->minValue(0)
                             ->default(0)
                             ->step(1000),
+
+                        Forms\Components\Section::make('Kode Unik Pembayaran')
+                            ->description('Kode unik akan ditambahkan ke harga untuk verifikasi pembayaran. Contoh: Harga Rp 50.000 + Kode Unik Rp 500 = Total Rp 50.500')
+                            ->schema([
+                                Forms\Components\TextInput::make('unique_code_min')
+                                    ->label('Kode Unik Minimum')
+                                    ->numeric()
+                                    ->minValue(1)
+                                    ->maxValue(9999)
+                                    ->default(100)
+                                    ->helperText('Nilai minimum kode unik (1-9999)'),
+
+                                Forms\Components\TextInput::make('unique_code_max')
+                                    ->label('Kode Unik Maksimum')
+                                    ->numeric()
+                                    ->minValue(1)
+                                    ->maxValue(9999)
+                                    ->default(999)
+                                    ->helperText('Nilai maksimum kode unik (1-9999)'),
+                            ])->collapsed(),
 
                         Forms\Components\Section::make('Informasi Rekening Pembayaran')
                             ->schema([

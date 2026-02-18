@@ -30,6 +30,8 @@ class ExamSchedule extends Model
         'description',
         'is_active',
         'created_by',
+        'unique_code_min',
+        'unique_code_max',
     ];
 
     protected function casts(): array

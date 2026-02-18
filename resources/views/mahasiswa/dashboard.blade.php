@@ -137,6 +137,12 @@
                                         Upload Pembayaran
                                     </a>
                                 @endif
+                                @if($activeRegistration->status === 'verified')
+                                    <a href="{{ route('mahasiswa.registrations.card', $activeRegistration) }}" target="_blank"
+                                       class="inline-flex items-center justify-center px-3 sm:px-4 py-2 bg-amber-600 border border-transparent rounded-md font-semibold text-xs sm:text-sm text-white uppercase tracking-widest hover:bg-amber-700 focus:bg-amber-700 active:bg-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                                        Download Kartu Ujian
+                                    </a>
+                                @endif
                             </div>
                         </div>
                     @else

@@ -74,4 +74,28 @@ class RegistrationPolicy
     {
         return $user->isAdmin();
     }
+
+    /**
+     * Determine whether the user can upload payment.
+     */
+    public function uploadPayment(User $user, Registration $registration): bool
+    {
+        return $user->isMahasiswa() && $user->id === $registration->user_id;
+    }
+
+    /**
+     * Determine whether the user can cancel the model.
+     */
+    public function cancel(User $user, Registration $registration): bool
+    {
+        return $user->isMahasiswa() && $user->id === $registration->user_id;
+    }
+
+    /**
+     * Determine whether the user can view the exam card.
+     */
+    public function viewCard(User $user, Registration $registration): bool
+    {
+        return $user->isMahasiswa() && $user->id === $registration->user_id;
+    }
 }

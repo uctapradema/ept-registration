@@ -2,9 +2,12 @@
 
 namespace App\Filament\Resources;
 
+use App\Enums\RegistrationStatus;
 use App\Filament\Resources\RegistrationResource\Pages;
 use App\Models\Registration;
 use App\Models\User;
+use App\Notifications\PaymentVerifiedNotification;
+use App\Notifications\PaymentRejectedNotification;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -44,32 +47,43 @@ class RegistrationResource extends Resource
 
                         Forms\Components\Select::make('user_id')
                             ->label('Peserta')
-                            ->relationship('user', 'name')
+                            ->options(function () {
+                                return \App\Models\User::where('role', 'mahasiswa')
+                                    ->pluck('name', 'id')
+                                    ->mapWithKeys(function ($name, $id) {
+                                        $user = \App\Models\User::find($id);
+                                        return [$id => "{$name} ({$user->nim})"];
+                                    });
+                            })
                             ->searchable()
                             ->preload()
-                            ->disabled()
-                            ->dehydrated(false),
+                            ->required()
+                            ->visible(fn (): bool => $isAdmin)
+                            ->disabled(fn ($record): bool => $record !== null),
 
                         Forms\Components\Select::make('exam_schedule_id')
                             ->label('Jadwal Ujian')
                             ->relationship('examSchedule', 'title')
                             ->searchable()
                             ->preload()
-                            ->disabled()
-                            ->dehydrated(false),
+                            ->required()
+                            ->visible(fn (): bool => $isAdmin)
+                            ->disabled(fn ($record): bool => $record !== null),
 
                         Forms\Components\Select::make('status')
                             ->label('Status')
-                            ->options([
-                                'pending_payment' => 'Menunggu Pembayaran',
-                                'awaiting_verification' => 'Menunggu Verifikasi',
-                                'verified' => 'Terverifikasi',
-                                'rejected' => 'Ditolak',
-                                'expired' => 'Kadaluarsa',
-                            ])
+                            ->options(RegistrationStatus::options())
                             ->required()
                             ->disabled(fn (): bool => ! $isAdmin && ! $isFinance)
                             ->live(),
+
+                        Forms\Components\FileUpload::make('payment_proof')
+                            ->label('Bukti Pembayaran')
+                            ->image()
+                            ->disk('public')
+                            ->directory('payment-proofs')
+                            ->visible(fn (): bool => $isAdmin)
+                            ->preserveFilenames(),
 
                         Forms\Components\Placeholder::make('payment_proof_display')
                             ->label('Bukti Pembayaran')
@@ -86,32 +100,25 @@ class RegistrationResource extends Resource
                                     );
                                 }
                                 return 'Belum ada bukti pembayaran';
-                            }),
-
-                        Forms\Components\Textarea::make('rejection_reason')
-                            ->label('Alasan Penolakan')
-                            ->rows(3)
-                            ->maxLength(65535)
-                            ->visible(fn (Forms\Get $get): bool => $get('status') === 'rejected')
-                            ->disabled(fn (): bool => ! $isAdmin && ! $isFinance)
-                            ->required(fn (Forms\Get $get): bool => $get('status') === 'rejected')
-                            ->columnSpanFull(),
+                            })
+                            ->visible(fn ($record) => $record !== null),
 
                         Forms\Components\DateTimePicker::make('payment_uploaded_at')
                             ->label('Waktu Upload Pembayaran')
-                            ->disabled()
-                            ->dehydrated(false),
+                            ->visible(fn (): bool => $isAdmin)
+                            ->seconds(false),
 
                         Forms\Components\DateTimePicker::make('payment_verified_at')
                             ->label('Waktu Verifikasi')
-                            ->disabled()
-                            ->dehydrated(false),
+                            ->visible(fn (): bool => $isAdmin)
+                            ->seconds(false),
 
                         Forms\Components\Select::make('verified_by')
                             ->label('Diverifikasi Oleh')
-                            ->relationship('verifiedBy', 'name')
-                            ->disabled()
-                            ->dehydrated(false),
+                            ->options(\App\Models\User::where('role', 'admin')->orWhere('role', 'finance')->pluck('name', 'id'))
+                            ->visible(fn (): bool => $isAdmin)
+                            ->searchable()
+                            ->preload(),
                     ])
                     ->columns(2),
             ]);
@@ -152,22 +159,8 @@ class RegistrationResource extends Resource
                 Tables\Columns\TextColumn::make('status')
                     ->label('Status')
                     ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'pending_payment' => 'warning',
-                        'awaiting_verification' => 'info',
-                        'verified' => 'success',
-                        'rejected' => 'danger',
-                        'expired' => 'gray',
-                        default => 'gray',
-                    })
-                    ->formatStateUsing(fn (string $state): string => match ($state) {
-                        'pending_payment' => 'Menunggu Pembayaran',
-                        'awaiting_verification' => 'Menunggu Verifikasi',
-                        'verified' => 'Terverifikasi',
-                        'rejected' => 'Ditolak',
-                        'expired' => 'Kadaluarsa',
-                        default => $state,
-                    })
+                    ->color(fn (string $state): string => RegistrationStatus::colors()[$state] ?? 'gray')
+                    ->formatStateUsing(fn (string $state): string => RegistrationStatus::options()[$state] ?? $state)
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('payment_uploaded_at')
@@ -197,6 +190,24 @@ class RegistrationResource extends Resource
                     ->sortable()
                     ->toggleable(),
 
+                Tables\Columns\TextColumn::make('listening_score')
+                    ->label('Listening')
+                    ->numeric()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                Tables\Columns\TextColumn::make('structure_score')
+                    ->label('Structure')
+                    ->numeric()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                Tables\Columns\TextColumn::make('reading_score')
+                    ->label('Reading')
+                    ->numeric()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Dibuat')
                     ->dateTime('d F Y, H:i')
@@ -206,13 +217,7 @@ class RegistrationResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->label('Status')
-                    ->options([
-                        'pending_payment' => 'Menunggu Pembayaran',
-                        'awaiting_verification' => 'Menunggu Verifikasi',
-                        'verified' => 'Terverifikasi',
-                        'rejected' => 'Ditolak',
-                        'expired' => 'Kadaluarsa',
-                    ])
+                    ->options(RegistrationStatus::options())
                     ->native(false),
 
                 Tables\Filters\SelectFilter::make('exam_schedule_id')
@@ -232,15 +237,19 @@ class RegistrationResource extends Resource
                     ->modalDescription('Apakah Anda yakin ingin memverifikasi pembayaran ini?')
                     ->modalSubmitActionLabel('Ya, Verifikasi')
                     ->visible(fn (Registration $record): bool =>
-                        in_array($record->status, ['awaiting_verification', 'pending_payment']) &&
+                        in_array($record->status, [RegistrationStatus::AWAITING_VERIFICATION->value, RegistrationStatus::PENDING_PAYMENT->value]) &&
                         (auth()->user()?->isAdmin() || auth()->user()?->isFinance())
                     )
                     ->action(function (Registration $record): void {
                         $record->update([
-                            'status' => 'verified',
+                            'status' => RegistrationStatus::VERIFIED->value,
                             'payment_verified_at' => now(),
                             'verified_by' => auth()->id(),
                         ]);
+
+                        // Send notification email
+                        $record->load(['user', 'examSchedule']);
+                        $record->user->notify(new PaymentVerifiedNotification($record));
                     }),
 
                 Tables\Actions\Action::make('reject')
@@ -258,16 +267,20 @@ class RegistrationResource extends Resource
                     ->modalDescription('Berikan alasan penolakan pembayaran ini.')
                     ->modalSubmitActionLabel('Ya, Tolak')
                     ->visible(fn (Registration $record): bool =>
-                        in_array($record->status, ['awaiting_verification', 'pending_payment', 'verified']) &&
+                        in_array($record->status, [RegistrationStatus::AWAITING_VERIFICATION->value, RegistrationStatus::PENDING_PAYMENT->value, RegistrationStatus::VERIFIED->value]) &&
                         (auth()->user()?->isAdmin() || auth()->user()?->isFinance())
                     )
-                    ->action(function (Registration $record, array $data): void {
+->action(function (Registration $record, array $data): void {
                         $record->update([
-                            'status' => 'rejected',
+                            'status' => RegistrationStatus::REJECTED->value,
                             'rejection_reason' => $data['rejection_reason'],
                             'payment_verified_at' => null,
                             'verified_by' => null,
                         ]);
+
+                        // Send notification email
+                        $record->load(['user', 'examSchedule']);
+                        $record->user->notify(new PaymentRejectedNotification($record));
                     }),
 
                 Tables\Actions\ViewAction::make(),
@@ -307,6 +320,7 @@ class RegistrationResource extends Resource
             'create' => Pages\CreateRegistration::route('/create'),
             'view' => Pages\ViewRegistration::route('/{record}'),
             'edit' => Pages\EditRegistration::route('/{record}/edit'),
+            'input-nilai' => Pages\InputNilai::route('/input-nilai'),
         ];
     }
 

@@ -65,7 +65,6 @@ class ExamScheduleSeeder extends Seeder
                         'start_time' => $scheduleData['start_time'],
                         'end_time' => $scheduleData['end_time'],
                         'quota' => $scheduleData['quota'],
-                        'registered_count' => 0,
                         'registration_deadline' => $registrationDeadline,
                         'price' => $scheduleData['price'],
                         'description' => null,

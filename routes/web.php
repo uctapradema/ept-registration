@@ -4,10 +4,17 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Mahasiswa\DashboardController;
 use App\Http\Controllers\Mahasiswa\ScheduleController;
 use App\Http\Controllers\Mahasiswa\RegistrationController;
+use App\Models\ExamSchedule;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
+    $examSchedules = ExamSchedule::where('is_active', true)
+        ->where('registration_deadline', '>', now())
+        ->orderBy('exam_date')
+        ->limit(6)
+        ->get();
+    
+    return view('welcome', compact('examSchedules'));
 });
 
 Route::get('/dashboard', function () {

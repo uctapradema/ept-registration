@@ -2,24 +2,27 @@
 
 namespace App\Http\Controllers\Mahasiswa;
 
+use App\Enums\RegistrationStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Mahasiswa\StoreRegistrationRequest;
+use App\Http\Requests\Mahasiswa\CancelRegistrationRequest;
+use App\Http\Requests\Mahasiswa\StorePaymentRequest;
 use App\Models\ExamSchedule;
 use App\Models\Registration;
+use App\Services\RegistrationService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
 
 class RegistrationController extends Controller
 {
+    public function __construct(
+        private RegistrationService $registrationService
+    ) {}
+
     public function index()
     {
-        $user = Auth::user();
-        
         $registrations = Registration::with('examSchedule')
-            ->where('user_id', $user->id)
+            ->where('user_id', auth()->id())
             ->latest()
             ->paginate(10);
 
@@ -28,7 +31,7 @@ class RegistrationController extends Controller
 
     public function create($schedule_id)
     {
-        $user = Auth::user();
+        $user = auth()->user();
         
         if ($user->hasActiveRegistration()) {
             $existingRegistration = Registration::with('examSchedule')
@@ -50,241 +53,80 @@ class RegistrationController extends Controller
         return view('mahasiswa.registrations.create', compact('schedule'));
     }
 
-    public function store(Request $request)
+    public function store(StoreRegistrationRequest $request)
     {
-        $user = Auth::user();
+        $user = auth()->user();
         
         if ($user->hasActiveRegistration()) {
             return redirect()->route('mahasiswa.dashboard')
                 ->with('error', 'Anda sudah memiliki pendaftaran aktif.');
         }
 
-        $validated = $request->validate([
-            'schedule_id' => 'required|exists:exam_schedules,id',
-            'agreement' => 'required|accepted',
-        ]);
-
-        $schedule = ExamSchedule::findOrFail($validated['schedule_id']);
+        $schedule = ExamSchedule::findOrFail($request->schedule_id);
 
         try {
-            $registration = DB::transaction(function () use ($user, $schedule) {
-                $lockedSchedule = ExamSchedule::where('id', $schedule->id)
-                    ->lockForUpdate()
-                    ->first();
-
-                if ($lockedSchedule->availableQuota() <= 0) {
-                    throw new \Exception('Kuota untuk jadwal ini sudah penuh.');
-                }
-
-                // Determine session from exam schedule
-                $session = $schedule->session ?? '01';
-
-                // Generate sequential number for this schedule
-                $registrationCount = Registration::where('exam_schedule_id', $schedule->id)->count() + 1;
-                $registrationNumber = 'EPT/' . $session . '/' . $schedule->exam_date->format('dmY') . '/' . str_pad($registrationCount, 4, '0', STR_PAD_LEFT);
-
-                $paymentDeadlineHours = $schedule->payment_deadline_hours ?? 24;
-
-                $minCode = $schedule->unique_code_min ?? 100;
-                $maxCode = $schedule->unique_code_max ?? 999;
-                $uniqueCode = rand($minCode, $maxCode);
-
-                return Registration::create([
-                    'user_id' => $user->id,
-                    'exam_schedule_id' => $schedule->id,
-                    'registration_number' => $registrationNumber,
-                    'status' => 'pending_payment',
-                    'expires_at' => now()->addHours($paymentDeadlineHours),
-                    'unique_code' => $uniqueCode,
-                ]);
-            });
+            $registration = $this->registrationService->createRegistration($user, $schedule);
 
             return redirect()->route('mahasiswa.registrations.show', $registration)
                 ->with('success', 'Pendaftaran berhasil dibuat. Silakan upload bukti pembayaran dalam waktu 24 jam.');
 
-        } catch (\Exception $e) {
+        } catch (\RuntimeException $e) {
             return redirect()->route('mahasiswa.schedules.index')
                 ->with('error', $e->getMessage());
+        } catch (\Exception $e) {
+            return redirect()->route('mahasiswa.schedules.index')
+                ->with('error', 'Terjadi kesalahan saat menyimpan pendaftaran.');
         }
     }
 
     public function show(Registration $registration)
     {
-        $user = Auth::user();
-        
-        if ($registration->user_id !== $user->id) {
-            abort(403, 'Unauthorized action.');
-        }
+        $this->authorize($registration);
 
         $registration->load('examSchedule', 'verifiedBy');
         
-        $statusLabels = [
-            'pending_payment' => 'Menunggu Pembayaran',
-            'awaiting_verification' => 'Menunggu Verifikasi',
-            'verified' => 'Terverifikasi',
-            'rejected' => 'Ditolak',
-            'cancelled' => 'Dibatalkan',
-            'expired' => 'Kadaluarsa',
-        ];
-
-        $statusColors = [
-            'pending_payment' => 'yellow',
-            'awaiting_verification' => 'blue',
-            'verified' => 'green',
-            'rejected' => 'red',
-            'cancelled' => 'gray',
-            'expired' => 'gray',
-        ];
-
-        return view('mahasiswa.registrations.show', compact('registration', 'statusLabels', 'statusColors'));
+        return view('mahasiswa.registrations.show', [
+            'registration' => $registration,
+        ]);
     }
 
     public function uploadPayment(Registration $registration)
     {
-        $user = Auth::user();
-        
-        if ($registration->user_id !== $user->id) {
-            abort(403, 'Unauthorized action.');
-        }
-
-        if ($registration->status !== 'pending_payment') {
-            return redirect()->route('mahasiswa.registrations.show', $registration)
-                ->with('error', 'Pembayaran sudah dilakukan atau status tidak valid.');
-        }
-
-        if ($registration->isExpired()) {
-            return redirect()->route('mahasiswa.registrations.show', $registration)
-                ->with('error', 'Batas waktu pembayaran telah habis.');
-        }
+        $this->authorize('uploadPayment', $registration);
+        $this->validatePaymentStatus($registration);
 
         return view('mahasiswa.registrations.upload-payment', compact('registration'));
     }
 
-    public function storePayment(Request $request, Registration $registration)
+    public function storePayment(StorePaymentRequest $request, Registration $registration)
     {
-        $user = Auth::user();
-        
-        if ($registration->user_id !== $user->id) {
-            abort(403, 'Unauthorized action.');
-        }
+        $this->authorize('uploadPayment', $registration);
+        $this->validatePaymentStatus($registration);
 
-        if ($registration->status !== 'pending_payment') {
-            return redirect()->route('mahasiswa.registrations.show', $registration)
-                ->with('error', 'Pembayaran sudah dilakukan atau status tidak valid.');
-        }
-
-        if ($registration->isExpired()) {
-            return redirect()->route('mahasiswa.registrations.show', $registration)
-                ->with('error', 'Batas waktu pembayaran telah habis.');
-        }
-
-        $validated = $request->validate([
-            'payment_proof' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
-            'payment_note' => 'nullable|string|max:500',
-        ], [
-            'payment_proof.required' => 'File bukti pembayaran wajib diupload.',
-            'payment_proof.mimes' => 'File harus berformat JPG, JPEG, PNG, atau PDF.',
-            'payment_proof.max' => 'Ukuran file maksimal 5MB.',
-        ]);
-
-        Log::info('Starting payment upload for registration: ' . $registration->id);
-        
         try {
-            if ($request->hasFile('payment_proof')) {
-                $file = $request->file('payment_proof');
-                
-                Log::info('File received: ' . $file->getClientOriginalName() . ' (' . $file->getSize() . ' bytes)');
-                
-                // Debug: Check file info
-                if (!$file->isValid()) {
-                    Log::error('File is not valid: ' . $file->getErrorMessage());
-                    return redirect()->back()->with('error', 'File upload gagal. Error: ' . $file->getErrorMessage());
-                }
-                
-                $fileName = 'payment_' . str_replace(['/', '\\'], '_', $registration->registration_number) . '_' . time() . '.' . $file->getClientOriginalExtension();
-                Log::info('Saving with filename: ' . $fileName);
-                
-                $path = $file->storeAs('payments', $fileName, 'public');
-                
-                Log::info('Stored path returned: ' . ($path ?: 'NULL/FALSE'));
+            $file = $request->file('payment_proof');
+            $path = $this->storePaymentFile($file, $registration);
 
-                if (!$path) {
-                    Log::error('Failed to store file - path is null/false');
-                    return redirect()->back()->with('error', 'Gagal menyimpan file ke storage.');
-                }
-                
-                Log::info('File saved successfully, updating registration...');
+            $this->registrationService->uploadPayment($registration, $path, $request->payment_note);
 
-                $registration->update([
-                    'payment_proof' => $path,
-                    'payment_uploaded_at' => now(),
-                    'status' => 'awaiting_verification',
-                    'payment_note' => $validated['payment_note'] ?? null,
-                ]);
-                
-                Log::info('Registration updated successfully');
-
-                if ($request->ajax() || $request->wantsJson()) {
-                    return response()->json([
-                        'success' => true,
-                        'message' => 'Bukti pembayaran berhasil diupload. Menunggu verifikasi.',
-                        'redirect' => route('mahasiswa.registrations.show', $registration),
-                    ]);
-                }
-
-                return redirect()->route('mahasiswa.registrations.show', $registration)
-                    ->with('success', 'Bukti pembayaran berhasil diupload. Menunggu verifikasi.');
-            }
-
-            Log::warning('No file in request');
-            
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Gagal mengupload file. Pastikan file tidak corrupt.',
-                ], 422);
-            }
-            
-            return redirect()->back()->with('error', 'Gagal mengupload file. Pastikan file tidak corrupt.');
+            return $this->buildResponse($request, $registration);
 
         } catch (\Exception $e) {
-            \Log::error('Payment upload error: ' . $e->getMessage());
-            
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Terjadi kesalahan: ' . $e->getMessage(),
-                ], 500);
-            }
-            
-            return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+            return $this->handleError($request, $e);
         }
     }
 
-    public function cancel(Request $request, Registration $registration)
+    public function cancel(CancelRegistrationRequest $request, Registration $registration)
     {
-        $user = Auth::user();
-        
-        if ($registration->user_id !== $user->id) {
-            abort(403, 'Unauthorized action.');
-        }
+        $this->authorize('cancel', $registration);
 
-        if (!in_array($registration->status, ['pending_payment', 'awaiting_verification'])) {
+        if (!in_array($registration->status, [RegistrationStatus::PENDING_PAYMENT->value, RegistrationStatus::AWAITING_VERIFICATION->value])) {
             return redirect()->route('mahasiswa.registrations.show', $registration)
                 ->with('error', 'Pendaftaran tidak dapat dibatalkan.');
         }
 
-        $validated = $request->validate([
-            'cancel_reason' => 'required|string|min:10|max:500',
-        ]);
-
         try {
-            DB::transaction(function () use ($registration, $validated) {
-                $registration->update([
-                    'status' => 'cancelled',
-                    'rejection_reason' => $validated['cancel_reason'],
-                ]);
-            });
+            $this->registrationService->cancelRegistration($registration, $request->cancel_reason);
 
             return redirect()->route('mahasiswa.dashboard')
                 ->with('success', 'Pendaftaran berhasil dibatalkan.');
@@ -296,13 +138,9 @@ class RegistrationController extends Controller
 
     public function card(Registration $registration)
     {
-        $user = Auth::user();
-        
-        if ($registration->user_id !== $user->id) {
-            abort(403, 'Unauthorized action.');
-        }
+        $this->authorize('viewCard', $registration);
 
-        if ($registration->status !== 'verified') {
+        if ($registration->status !== RegistrationStatus::VERIFIED->value) {
             return redirect()->route('mahasiswa.registrations.show', $registration)
                 ->with('error', 'Kartu ujian hanya tersedia untuk pendaftaran yang telah terverifikasi.');
         }
@@ -318,5 +156,58 @@ class RegistrationController extends Controller
         $filename = 'kartu-ujian-' . str_replace('/', '-', $registration->registration_number) . '.pdf';
         
         return $pdf->stream($filename);
+    }
+
+    private function validatePaymentStatus(Registration $registration): void
+    {
+        if ($registration->status !== RegistrationStatus::PENDING_PAYMENT->value) {
+            throw new \RuntimeException('Pembayaran sudah dilakukan atau status tidak valid.');
+        }
+
+        if ($registration->isExpired()) {
+            throw new \RuntimeException('Batas waktu pembayaran telah habis.');
+        }
+    }
+
+    private function storePaymentFile($file, Registration $registration): string
+    {
+        // Sanitize extension - hanya alphanumeric
+        $extension = $file->getClientOriginalExtension();
+        $safeExtension = preg_replace('/[^a-zA-Z0-9]/', '', strtolower($extension));
+        
+        // Generate random filename untuk keamanan
+        $randomName = bin2hex(random_bytes(16));
+        $fileName = $randomName . '.' . $safeExtension;
+        
+        // Simpan di storage non-public
+        return $file->storeAs('payments', $fileName, 'private');
+    }
+
+    private function buildResponse(Request $request, Registration $registration)
+    {
+        $message = 'Bukti pembayaran berhasil diupload. Menunggu verifikasi.';
+        $redirect = route('mahasiswa.registrations.show', $registration);
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'redirect' => $redirect,
+            ]);
+        }
+
+        return redirect($redirect)->with('success', $message);
+    }
+
+    private function handleError(Request $request, \Exception $e)
+    {
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+
+        return redirect()->back()->with('error', $e->getMessage());
     }
 }

@@ -46,24 +46,6 @@
                                 </thead>
                                 <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                                     @foreach($registrations as $reg)
-                                        @php
-                                            $statusColors = [
-                                                'pending_payment' => 'bg-yellow-100 text-yellow-800',
-                                                'awaiting_verification' => 'bg-blue-100 text-blue-800',
-                                                'verified' => 'bg-green-100 text-green-800',
-                                                'rejected' => 'bg-red-100 text-red-800',
-                                                'cancelled' => 'bg-gray-100 text-gray-800',
-                                                'expired' => 'bg-orange-100 text-orange-800',
-                                            ];
-                                            $statusLabels = [
-                                                'pending_payment' => 'Menunggu Pembayaran',
-                                                'awaiting_verification' => 'Menunggu Verifikasi',
-                                                'verified' => 'Terverifikasi',
-                                                'rejected' => 'Ditolak',
-                                                'cancelled' => 'Dibatalkan',
-                                                'expired' => 'Kadaluarsa',
-                                            ];
-                                        @endphp
                                         <tr>
                                             <td class="px-4 py-4 whitespace-nowrap text-sm font-mono text-gray-900 dark:text-white">
                                                 {{ $reg->registration_number }}
@@ -75,9 +57,7 @@
                                                 {{ $reg->examSchedule->exam_date->format('d F Y') ?? '-' }}
                                             </td>
                                             <td class="px-4 py-4 whitespace-nowrap">
-                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $statusColors[$reg->status] ?? 'bg-gray-100 text-gray-800' }}">
-                                                    {{ $statusLabels[$reg->status] ?? $reg->status }}
-                                                </span>
+                                                <x-status-badge :status="$reg->status" />
                                             </td>
                                             <td class="px-4 py-4 whitespace-nowrap text-sm">
                                                 <a href="{{ route('mahasiswa.registrations.show', $reg) }}" 

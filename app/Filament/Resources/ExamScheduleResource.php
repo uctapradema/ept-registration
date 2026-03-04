@@ -176,12 +176,13 @@ class ExamScheduleResource extends Resource
                     ->numeric()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('registered_count')
+                Tables\Columns\TextColumn::make('quota_info')
                     ->label('Terdaftar')
-                    ->numeric()
-                    ->sortable()
-                    ->formatStateUsing(fn (ExamSchedule $record): string => $record->registeredCount() . ' / ' . $record->quota)
-                    ->color(fn (ExamSchedule $record): string => $record->registeredCount() >= $record->quota ? 'danger' : 'success'),
+                    ->html()
+                    ->formatStateUsing(fn (ExamSchedule $record): string => 
+                        '<span class="' . ($record->registeredCount() >= $record->quota ? 'text-danger' : 'text-success') . '">' 
+                        . $record->registeredCount() . ' / ' . $record->quota . '</span>'
+                    ),
 
                 Tables\Columns\TextColumn::make('payment_deadline_hours')
                     ->label('Batas Bayar')

@@ -9,6 +9,9 @@
 
         <title>{{ config('app.name', 'EPT - English Proficiency Test') }}</title>
 
+        <!-- Favicon -->
+        <link rel="shortcut icon" type="image/png" href="{{ asset('saasintro/assets/images/logo/logo_ept1.png') }}">
+
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />

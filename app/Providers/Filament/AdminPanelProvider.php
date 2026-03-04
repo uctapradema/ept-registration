@@ -30,6 +30,9 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            ->brandName('EPT UNIVERSITAS NGUDI WALUYO')
+            ->brandLogo(asset('saasintro/assets/images/logo/logo_ept.png'))
+            ->favicon(asset('saasintro/assets/images/logo/logo_ept.png'))
             ->colors([
                 'primary' => Color::Amber,
             ])

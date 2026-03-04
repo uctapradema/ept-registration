@@ -35,10 +35,15 @@ Aplikasi EPT (English Proficiency Test) adalah sistem pendaftaran ujian bahasa I
 
 ### 🔴 HIGH PRIORITY (Wajib Segera)
 
-#### 1. Notifikasi Email/SMS
+#### 1. Notifikasi Email/SMS/WhatsApp
 **Masalah:** Mahasiswa tidak tahu jika status pembayaran berubah (diverifikasi/ditolak)
 
-**Solusi:**
+**Catatan:** Tanyakan ke Pimpro tentang preferensi notifikasi:
+- **Opsi A:** Email Notifikasi (standar Laravel)
+- **Opsi B:** WhatsApp Gateway (Fonnte/Wablas/Twilio)
+- **Opsi C:** SMS (Twilio)
+
+**Solusi (Email - Default):**
 - [ ] Install package: `composer require laravel-notification-channels/twilio` (untuk SMS)
 - [ ] Buat Notification classes:
   - `PaymentVerifiedNotification`
@@ -49,11 +54,21 @@ Aplikasi EPT (English Proficiency Test) adalah sistem pendaftaran ujian bahasa I
   - Status berubah menjadi `rejected`
   - Pendaftaran akan expired (reminder)
 
+**Solusi (WhatsApp - Alternatif):**
+- [ ] Install package WhatsApp Gateway (Fonnte/Wablas)
+- [ ] Konfigurasi API Key di `.env`
+- [ ] Buat WhatsApp notification classes
+- [ ] Kirim notifikasi saat:
+  - Pendaftaran berhasil
+  - Pembayaran diverifikasi
+  - Pembayaran ditolak
+  - Reminder deadline pembayaran
+
 **File yang diubah:**
 - `app/Notifications/PaymentVerifiedNotification.php` (baru)
 - `app/Notifications/PaymentRejectedNotification.php` (baru)
 - `app/Filament/Resources/RegistrationResource.php` (tambah trigger)
-- `.env` (konfigurasi mail/SMS)
+- `.env` (konfigurasi mail/SMS/WhatsApp)
 
 **Estimasi:** 4-6 jam
 
@@ -386,10 +401,10 @@ if ($hasActive) {
 ## Checklist Progress
 
 ### Sisi User/Mahasiswa
-- [ ] 1. Notifikasi Email/SMS
+- [ ] 1. Notifikasi Email/SMS/WhatsApp (tanyakan Pimpro)
 - [x] 2. Kartu Ujian PDF
 - [x] 3. Validasi Double Booking
-- [ ] 4. Reminder Email
+- [ ] 4. Reminder Email/WhatsApp
 - [ ] 5. Reset Password
 - [ ] 6. Upload Foto Profil
 - [ ] 7. Search & Filter Riwayat

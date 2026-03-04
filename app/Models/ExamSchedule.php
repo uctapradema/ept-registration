@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\RegistrationStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,6 +14,12 @@ class ExamSchedule extends Model
     use HasFactory;
     use SoftDeletes;
 
+    private const SESSIONS = [
+        '01' => ['label' => 'Pagi', 'start' => '09:00', 'end' => '11:00'],
+        '02' => ['label' => 'Siang', 'start' => '13:00', 'end' => '15:00'],
+        '03' => ['label' => 'Sore', 'start' => '15:30', 'end' => '17:30'],
+    ];
+
     protected $fillable = [
         'title',
         'session',
@@ -20,7 +27,6 @@ class ExamSchedule extends Model
         'start_time',
         'end_time',
         'quota',
-        'registered_count',
         'registration_deadline',
         'payment_deadline_hours',
         'price',
@@ -44,7 +50,6 @@ class ExamSchedule extends Model
             'payment_deadline_hours' => 'integer',
             'price' => 'decimal:2',
             'is_active' => 'boolean',
-            'registered_count' => 'integer',
             'quota' => 'integer',
         ];
     }
@@ -62,7 +67,11 @@ class ExamSchedule extends Model
     public function registeredCount(): int
     {
         return $this->registrations()
-            ->whereIn('status', ['pending_payment', 'awaiting_verification', 'verified'])
+            ->whereIn('status', [
+                RegistrationStatus::PENDING_PAYMENT->value,
+                RegistrationStatus::AWAITING_VERIFICATION->value,
+                RegistrationStatus::VERIFIED->value,
+            ])
             ->count();
     }
 
@@ -82,22 +91,12 @@ class ExamSchedule extends Model
 
     public static function getSessionTimes(string $session): array
     {
-        return match($session) {
-            '01' => ['start' => '09:00', 'end' => '11:00'],
-            '02' => ['start' => '13:00', 'end' => '15:00'],
-            '03' => ['start' => '15:30', 'end' => '17:30'],
-            default => ['start' => '09:00', 'end' => '11:00'],
-        };
+        return self::SESSIONS[$session] ?? self::SESSIONS['01'];
     }
 
     public function getSessionLabelAttribute(): string
     {
-        return match($this->session) {
-            '01' => 'Pagi',
-            '02' => 'Siang',
-            '03' => 'Sore',
-            default => '-',
-        };
+        return self::SESSIONS[$this->session]['label'] ?? '-';
     }
 
     public function isAvailable(): bool

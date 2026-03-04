@@ -75,21 +75,7 @@
                                         {{ $activeRegistration->registration_number }}
                                     </p>
                                 </div>
-                                @php
-                                    $statusColors = [
-                                        'pending_payment' => 'bg-yellow-100 text-yellow-800',
-                                        'awaiting_verification' => 'bg-blue-100 text-blue-800',
-                                        'verified' => 'bg-green-100 text-green-800',
-                                    ];
-                                    $statusLabels = [
-                                        'pending_payment' => 'Menunggu Pembayaran',
-                                        'awaiting_verification' => 'Menunggu Verifikasi',
-                                        'verified' => 'Terverifikasi',
-                                    ];
-                                @endphp
-                                <span class="px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium {{ $statusColors[$activeRegistration->status] ?? 'bg-gray-100 text-gray-800' }}">
-                                    {{ $statusLabels[$activeRegistration->status] ?? $activeRegistration->status }}
-                                </span>
+                                <x-status-badge :status="$activeRegistration->status" />
                             </div>
 
                             <!-- Alert untuk rejected dengan alasan -->
@@ -135,12 +121,6 @@
                                     <a href="{{ route('mahasiswa.registrations.payment', $activeRegistration) }}" 
                                        class="inline-flex items-center justify-center px-3 sm:px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs sm:text-sm text-white uppercase tracking-widest hover:bg-green-700 focus:bg-green-700 active:bg-green-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition ease-in-out duration-150">
                                         Upload Pembayaran
-                                    </a>
-                                @endif
-                                @if($activeRegistration->status === 'verified')
-                                    <a href="{{ route('mahasiswa.registrations.card', $activeRegistration) }}" target="_blank"
-                                       class="inline-flex items-center justify-center px-3 sm:px-4 py-2 bg-amber-600 border border-transparent rounded-md font-semibold text-xs sm:text-sm text-white uppercase tracking-widest hover:bg-amber-700 focus:bg-amber-700 active:bg-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition ease-in-out duration-150">
-                                        Download Kartu Ujian
                                     </a>
                                 @endif
                             </div>
@@ -226,33 +206,13 @@
                                                 {{ $registration->examSchedule->title }}
                                             </td>
                                             <td class="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap">
-                                                @php
-                                                    $historyStatusColors = [
-                                                        'rejected' => 'bg-red-100 text-red-800',
-                                                        'cancelled' => 'bg-gray-100 text-gray-800',
-                                                        'expired' => 'bg-orange-100 text-orange-800',
-                                                    ];
-                                                    $historyStatusLabels = [
-                                                        'rejected' => 'Ditolak',
-                                                        'cancelled' => 'Dibatalkan',
-                                                        'expired' => 'Kadaluarsa',
-                                                    ];
-                                                @endphp
-                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $historyStatusColors[$registration->status] ?? 'bg-gray-100 text-gray-800' }}">
-                                                    {{ $historyStatusLabels[$registration->status] ?? $registration->status }}
-                                                </span>
+                                                <x-status-badge :status="$registration->status" />
                                             </td>
                                             <td class="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400 hidden md:table-cell">
-                                                @if($registration->status === 'rejected' && $registration->rejection_reason)
-                                                    <span class="text-red-600" title="{{ $registration->rejection_reason }}">
-                                                        {{ Str::limit($registration->rejection_reason, 30) }}
+                                                @if($registration->history_note)
+                                                    <span class="@if($registration->status === 'verified') text-green-600 @elseif($registration->status === 'rejected') text-red-600 @elseif($registration->status === 'expired') text-orange-600 @endif">
+                                                        {{ Str::limit($registration->history_note, 30) }}
                                                     </span>
-                                                @elseif($registration->status === 'expired')
-                                                    <span class="text-orange-600">
-                                                        Melebihi {{ $registration->examSchedule->payment_deadline_hours ?? 24 }} jam
-                                                    </span>
-                                                @elseif($registration->status === 'cancelled' && $registration->rejection_reason)
-                                                    {{ Str::limit($registration->rejection_reason, 30) }}
                                                 @else
                                                     -
                                                 @endif

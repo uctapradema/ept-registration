@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Mahasiswa;
 
+use App\Enums\RegistrationStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Registration;
 use Illuminate\Http\Request;
@@ -21,7 +22,7 @@ class DashboardController extends Controller
 
         $recentRegistrations = Registration::with('examSchedule')
             ->where('user_id', $user->id)
-            ->whereNotIn('status', ['pending_payment', 'awaiting_verification', 'verified'])
+            ->history()
             ->latest()
             ->take(5)
             ->get();

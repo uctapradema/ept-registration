@@ -37,23 +37,7 @@
                             </p>
                         </div>
                         <div class="self-start sm:self-auto">
-                            <span class="px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium
-                                @if($registration->status === 'pending_payment')
-                                    bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
-                                @elseif($registration->status === 'awaiting_verification')
-                                    bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200
-                                @elseif($registration->status === 'verified')
-                                    bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
-                                @elseif($registration->status === 'rejected')
-                                    bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
-                                @elseif($registration->status === 'cancelled')
-                                    bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300
-                                @elseif($registration->status === 'expired')
-                                    bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200
-                                @endif
-                            ">
-                                {{ $statusLabels[$registration->status] ?? $registration->status }}
-                            </span>
+                            <x-status-badge :status="$registration->status" />
                         </div>
                     </div>
 
@@ -304,13 +288,6 @@
                                     class="inline-flex items-center justify-center px-3 sm:px-4 py-2.5 sm:py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs sm:text-sm text-white uppercase tracking-widest hover:bg-red-700 transition w-full sm:w-auto">
                                 Batalkan
                             </button>
-                        @endif
-
-                        @if($registration->status === 'verified')
-                            <a href="{{ route('mahasiswa.registrations.card', $registration) }}" target="_blank"
-                               class="inline-flex items-center justify-center px-3 sm:px-4 py-2.5 sm:py-2 bg-amber-600 border border-transparent rounded-md font-semibold text-xs sm:text-sm text-white uppercase tracking-widest hover:bg-amber-700 transition w-full sm:w-auto">
-                                Download Kartu Ujian
-                            </a>
                         @endif
                     </div>
                 </div>

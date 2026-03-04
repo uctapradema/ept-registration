@@ -69,10 +69,24 @@ class Participants extends Page
         }
 
         $registrations = $query->get();
+        
+        $filename = 'daftar_peserta_ept';
+        
+        if ($examScheduleId) {
+            $examSchedule = \App\Models\ExamSchedule::find($examScheduleId);
+            if ($examSchedule) {
+                $title = str_replace(' ', '_', $examSchedule->title);
+                $session = $examSchedule->session;
+                $date = $examSchedule->exam_date ? $examSchedule->exam_date->format('Y-m-d') : date('Y-m-d');
+                $filename = "{$title}_Sesi{$session}_{$date}";
+            }
+        } else {
+            $filename .= '_' . date('Y-m-d');
+        }
 
         $headers = [
             'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="daftar_peserta_ept_' . date('Y-m-d') . '.csv"',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '.csv"',
         ];
 
         $callback = function() use ($registrations) {

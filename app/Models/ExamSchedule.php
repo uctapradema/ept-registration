@@ -44,8 +44,8 @@ class ExamSchedule extends Model
     {
         return [
             'exam_date' => 'date',
-            'start_time' => 'datetime',
-            'end_time' => 'datetime',
+            'start_time' => 'string',
+            'end_time' => 'string',
             'registration_deadline' => 'datetime',
             'payment_deadline_hours' => 'integer',
             'price' => 'decimal:2',

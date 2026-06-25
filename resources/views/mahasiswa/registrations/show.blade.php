@@ -99,7 +99,7 @@
                                 <div>
                                     <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Waktu</p>
                                     <p class="font-medium text-sm sm:text-base text-gray-900 dark:text-white">
-                                        {{ $registration->examSchedule->start_time->format('H:i') }} - {{ $registration->examSchedule->end_time->format('H:i') }}
+                                        {{ $registration->examSchedule->start_time }} - {{ $registration->examSchedule->end_time }}
                                     </p>
                                 </div>
                                 <div>

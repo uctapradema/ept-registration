@@ -35,7 +35,7 @@ class PaymentVerifiedNotification extends Notification implements ShouldQueue
             ->line('**Nomor Pendaftaran:** ' . $this->registration->registration_number)
             ->line('**Jadwal:** ' . ($schedule->title ?? '-'))
             ->line('**Tanggal Ujian:** ' . ($schedule->exam_date ? $schedule->exam_date->format('d F Y') : '-'))
-            ->line('**Waktu:** ' . ($schedule->start_time ? $schedule->start_time->format('H:i') . ' - ' . $schedule->end_time->format('H:i') : '-'))
+            ->line('**Waktu:** ' . ($schedule->start_time ? $schedule->start_time . ' - ' . $schedule->end_time : '-'))
             ->line('**Ruang:** ' . ($schedule->location ?? '-'))
             ->line('')
             ->line('Silakan download Kartu Ujian Anda dan bawa pada hari ujian.')

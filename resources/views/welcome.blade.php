@@ -227,7 +227,7 @@
                             <p class="mb-3">{{ $schedule->exam_date->format('d F Y') }}</p>
                             <h3 class="mb-3">Rp {{ number_format($schedule->price, 0, ',', '.') }}</h3>
                             <ul class="text-start">
-                                <li class="mb-2"><i class="lni lni-clock me-2"></i>{{ $schedule->start_time->format('H:i') }} - {{ $schedule->end_time->format('H:i') }} WIB</li>
+                                <li class="mb-2"><i class="lni lni-clock me-2"></i>{{ $schedule->start_time }} - {{ $schedule->end_time }} WIB</li>
                                 <li class="mb-2"><i class="lni lni-users me-2"></i>Tersedia: {{ $schedule->availableQuota() }} / {{ $schedule->quota }}</li>
                                 <li class="mb-2"><i class="lni lni-flag me-2"></i>Deadline: {{ $schedule->registration_deadline->format('d F Y') }}</li>
                             </ul>

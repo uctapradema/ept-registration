@@ -171,16 +171,13 @@ class RegistrationController extends Controller
 
     private function storePaymentFile($file, Registration $registration): string
     {
-        // Sanitize extension - hanya alphanumeric
         $extension = $file->getClientOriginalExtension();
         $safeExtension = preg_replace('/[^a-zA-Z0-9]/', '', strtolower($extension));
-        
-        // Generate random filename untuk keamanan
+
         $randomName = bin2hex(random_bytes(16));
         $fileName = $randomName . '.' . $safeExtension;
-        
-        // Simpan di storage non-public
-        return $file->storeAs('payments', $fileName, 'private');
+
+        return $file->storeAs('payments', $fileName, 'public');
     }
 
     private function buildResponse(Request $request, Registration $registration)

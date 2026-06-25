@@ -1,59 +1,18 @@
 <?php
 
-namespace App\Filament\Pages;
+namespace App\Http\Controllers\Admin;
 
-use Filament\Pages\Page;
+use App\Http\Controllers\Controller;
 use App\Models\Registration;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
-class Participants extends Page
+class ParticipantExportController extends Controller
 {
-    protected static ?string $navigationIcon = 'heroicon-o-user-group';
-
-    protected static ?string $navigationLabel = 'Daftar Peserta';
-
-    protected static ?string $navigationGroup = 'Manajemen Ujian';
-
-    protected static ?string $title = 'Daftar Peserta Ujian';
-
-    protected static string $view = 'filament.pages.participants';
-
-    public $registrations;
-    public $examScheduleId;
-
-    public function mount(): void
+    public function export(Request $request): StreamedResponse
     {
-        $this->examScheduleId = request()->get('exam_schedule_id');
-    }
-
-    protected function getViewData(): array
-    {
-        $query = $this->buildBaseQuery();
-        $this->registrations = $query->get();
-
-        return [
-            'registrations' => $this->registrations,
-            'examScheduleId' => $this->examScheduleId,
-        ];
-    }
-
-    private function buildBaseQuery()
-    {
-        $query = Registration::with(['user', 'examSchedule'])
-            ->where('status', 'verified')
-            ->orderBy('payment_verified_at', 'asc');
-
-        if ($this->examScheduleId) {
-            $query->where('exam_schedule_id', $this->examScheduleId);
-        }
-
-        return $query;
-    }
-
-    public function exportExcel(): StreamedResponse
-    {
-        $examScheduleId = request()->get('exam_schedule_id');
+        $examScheduleId = $request->get('exam_schedule_id');
 
         $query = Registration::with(['user', 'examSchedule'])
             ->where('status', 'verified')
@@ -97,9 +56,9 @@ class Participants extends Page
         return response()->stream($callback, 200, $headers);
     }
 
-    public function printPdf(): Response
+    public function print(Request $request): Response
     {
-        $examScheduleId = request()->get('exam_schedule_id');
+        $examScheduleId = $request->get('exam_schedule_id');
 
         $query = Registration::with(['user', 'examSchedule'])
             ->where('status', 'verified')

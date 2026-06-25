@@ -86,7 +86,7 @@
                 <div class="schedule-title">
                     <strong>{{ $schedule->title }}</strong><br>
                     Tanggal: {{ $schedule->exam_date->format('d F Y') }} | 
-                    Sesi: {{ $schedule->session ?? '-' }} ({{ $schedule->start_time->format('H:i') }} - {{ $schedule->end_time->format('H:i') }}) |
+                    Sesi: {{ $schedule->session ?? '-' }} ({{ $schedule->start_time }} - {{ $schedule->end_time }}) |
                     Total Peserta: {{ $scheduleRegistrations->count() }} orang
                 </div>
 

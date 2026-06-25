@@ -81,7 +81,7 @@ class User extends Authenticatable
     public function hasActiveRegistration(): bool
     {
         return $this->registrations()
-            ->Active()
+            ->active()
             ->exists();
     }
 }

@@ -31,7 +31,7 @@
                             <div>
                                 <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Waktu</p>
                                 <p class="font-medium text-sm sm:text-base text-gray-900 dark:text-white">
-                                    {{ $schedule->start_time->format('H:i') }} - {{ $schedule->end_time->format('H:i') }}
+                                    {{ $schedule->start_time }} - {{ $schedule->end_time }}
                                 </p>
                             </div>
                             

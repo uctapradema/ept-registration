@@ -4,6 +4,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Mahasiswa\DashboardController;
 use App\Http\Controllers\Mahasiswa\ScheduleController;
 use App\Http\Controllers\Mahasiswa\RegistrationController;
+use App\Http\Controllers\Admin\ParticipantExportController;
 use App\Models\ExamSchedule;
 use Illuminate\Support\Facades\Route;
 
@@ -44,6 +45,12 @@ Route::middleware(['auth', 'mahasiswa'])->prefix('mahasiswa')->name('mahasiswa.'
     Route::post('/registrations/{registration}/payment', [RegistrationController::class, 'storePayment'])->name('registrations.payment.store');
     Route::get('/registrations/{registration}/card', [RegistrationController::class, 'card'])->name('registrations.card');
     Route::delete('/registrations/{registration}', [RegistrationController::class, 'cancel'])->name('registrations.cancel');
+});
+
+// Admin Export Routes
+Route::middleware(['auth'])->prefix('admin/participants')->name('admin.participants.')->group(function () {
+    Route::get('/export', [ParticipantExportController::class, 'export'])->name('export');
+    Route::get('/print', [ParticipantExportController::class, 'print'])->name('print');
 });
 
 require __DIR__.'/auth.php';

@@ -22,3 +22,15 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Deployment files
+deploy-windows.bat
+deploy.sh
+/public/deploy.php
+/public/test.php
+
+# Database dumps
+ept.sql
+
+# Documentation
+PANDUAN_FILEZILLA.md

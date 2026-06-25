@@ -169,7 +169,7 @@ class ExamScheduleResource extends Resource
 
                 Tables\Columns\TextColumn::make('start_time')
                     ->label('Waktu')
-                    ->formatStateUsing(fn (ExamSchedule $record): string => $record->start_time->format('H:i') . ' - ' . $record->end_time->format('H:i')),
+                    ->formatStateUsing(fn (ExamSchedule $record): string => $record->start_time . ' - ' . $record->end_time),
 
                 Tables\Columns\TextColumn::make('quota')
                     ->label('Kuota')

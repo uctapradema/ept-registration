@@ -1,6 +1,7 @@
 @php
     $examScheduleId = request()->get('exam_schedule_id');
     $examSchedules = \App\Models\ExamSchedule::orderBy('exam_date', 'desc')->get();
+    $currentUrl = url()->current();
 @endphp
 
 <x-filament::section>
@@ -13,9 +14,9 @@
     </x-slot:description>
 
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <form method="GET" action="{{ url()->current() }}" class="flex flex-wrap items-center gap-3">
-            <x-filament::input.select 
-                name="exam_schedule_id" 
+        <form method="GET" action="{{ $currentUrl }}" class="flex flex-wrap items-center gap-3">
+            <x-filament::input.select
+                name="exam_schedule_id"
                 onchange="this.form.submit()"
                 class="w-full sm:w-64"
             >
@@ -26,23 +27,28 @@
                     </option>
                 @endforeach
             </x-filament::input.select>
-            
+
             @if($examScheduleId)
-                <a href="{{ url()->current() }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
+                <a href="{{ $currentUrl }}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
                     Reset Filter
                 </a>
             @endif
         </form>
 
         <div class="flex items-center gap-2">
-            <form method="GET" action="{{ url()->current() }}">
-                <input type="hidden" name="exam_schedule_id" value="{{ $examScheduleId }}">
-                <x-filament::button type="submit" name="action" value="export" color="success">
-                    Download Excel
-                </x-filament::button>
-            </form>
-            
-            <x-filament::button tag="a" href="{{ url()->current() }}?exam_schedule_id={{ $examScheduleId }}&action=print" target="_blank">
+            <x-filament::button
+                tag="a"
+                href="{{ route('admin.participants.export', ['exam_schedule_id' => $examScheduleId]) }}"
+                color="success"
+            >
+                Download Excel
+            </x-filament::button>
+
+            <x-filament::button
+                tag="a"
+                href="{{ route('admin.participants.print', ['exam_schedule_id' => $examScheduleId]) }}"
+                target="_blank"
+            >
                 Print / PDF
             </x-filament::button>
         </div>
@@ -73,7 +79,7 @@
                             <td class="fi-ta-cell px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{{ $reg->user->major ?? '-' }}</td>
                             <td class="fi-ta-cell px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{{ $reg->user->faculty ?? '-' }}</td>
                             <td class="fi-ta-cell px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{{ $reg->examSchedule->title ?? '-' }}</td>
-                            <td class="fi-ta-cell px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{{ $reg->payment_verified_at ? $reg->payment_verified_at->format('d F Y, H:i') : '-' }}</td>
+                            <td class="fi-ta-cell px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{{ $reg->payment_verified_at?->format('d F Y, H:i') ?? '-' }}</td>
                         </tr>
                     @endforeach
                 </tbody>

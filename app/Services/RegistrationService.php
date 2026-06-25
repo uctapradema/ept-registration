@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Constants\AppConstants;
 use App\Enums\RegistrationStatus;
 use App\Models\ExamSchedule;
 use App\Models\Registration;
@@ -30,7 +31,7 @@ class RegistrationService
                 'exam_schedule_id' => $schedule->id,
                 'registration_number' => $registrationNumber,
                 'status' => RegistrationStatus::PENDING_PAYMENT->value,
-                'expires_at' => now()->addHours($schedule->payment_deadline_hours ?? Registration::DEFAULT_PAYMENT_DEADLINE_HOURS),
+                'expires_at' => now()->addHours($schedule->payment_deadline_hours ?? AppConstants::DEFAULT_PAYMENT_DEADLINE_HOURS),
                 'unique_code' => $uniqueCode,
             ]);
 

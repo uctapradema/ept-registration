@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Constants\AppConstants;
 use App\Enums\RegistrationStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -12,12 +13,6 @@ class Registration extends Model
 {
     use HasFactory;
     use SoftDeletes;
-
-    public const DEFAULT_PAYMENT_DEADLINE_HOURS = 24;
-    public const MIN_CANCEL_REASON_LENGTH = 10;
-    public const MAX_CANCEL_REASON_LENGTH = 500;
-    public const DEFAULT_UNIQUE_CODE_MIN = 100;
-    public const DEFAULT_UNIQUE_CODE_MAX = 999;
 
     protected $fillable = [
         'user_id',
@@ -127,43 +122,6 @@ class Registration extends Model
         return $price + ($this->unique_code ?? 0);
     }
 
-    public function getStatusColorAttribute(): string
-    {
-        return match($this->status) {
-            'pending_payment' => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-            'awaiting_verification' => 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-            'verified' => 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-            'rejected' => 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-            'cancelled' => 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
-            'expired' => 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-            default => 'bg-gray-100 text-gray-800',
-        };
-    }
-
-    public function getStatusLabelAttribute(): string
-    {
-        return match($this->status) {
-            'pending_payment' => 'Menunggu Pembayaran',
-            'awaiting_verification' => 'Menunggu Verifikasi',
-            'verified' => 'Terverifikasi',
-            'rejected' => 'Ditolak',
-            'cancelled' => 'Dibatalkan',
-            'expired' => 'Kadaluarsa',
-            default => $this->status,
-        };
-    }
-
-    public function getHistoryNoteAttribute(): ?string
-    {
-        return match($this->status) {
-            'verified' => 'Terverifikasi - Kartu ujian sudah tersedia',
-            'rejected' => $this->rejection_reason,
-            'expired' => 'Melebihi ' . ($this->examSchedule->payment_deadline_hours ?? self::DEFAULT_PAYMENT_DEADLINE_HOURS) . ' jam',
-            'cancelled' => $this->rejection_reason,
-            default => null,
-        };
-    }
-
     public static function generateRegistrationNumber(ExamSchedule $schedule): string
     {
         $session = $schedule->session ?? '01';
@@ -174,8 +132,8 @@ class Registration extends Model
 
     public static function generateUniqueCode(ExamSchedule $schedule): int
     {
-        $min = $schedule->unique_code_min ?? self::DEFAULT_UNIQUE_CODE_MIN;
-        $max = $schedule->unique_code_max ?? self::DEFAULT_UNIQUE_CODE_MAX;
+        $min = $schedule->unique_code_min ?? AppConstants::DEFAULT_UNIQUE_CODE_MIN;
+        $max = $schedule->unique_code_max ?? AppConstants::DEFAULT_UNIQUE_CODE_MAX;
         
         return rand($min, $max);
     }

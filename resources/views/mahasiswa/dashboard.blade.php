@@ -209,9 +209,18 @@
                                                 <x-status-badge :status="$registration->status" />
                                             </td>
                                             <td class="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400 hidden md:table-cell">
-                                                @if($registration->history_note)
+                                                @php
+                                                    $historyNote = match($registration->status) {
+                                                        'verified' => 'Terverifikasi - Kartu ujian sudah tersedia',
+                                                        'rejected' => $registration->rejection_reason,
+                                                        'expired' => 'Melebihi ' . ($registration->examSchedule->payment_deadline_hours ?? 24) . ' jam',
+                                                        'cancelled' => $registration->rejection_reason,
+                                                        default => null,
+                                                    };
+                                                @endphp
+                                                @if($historyNote)
                                                     <span class="@if($registration->status === 'verified') text-green-600 @elseif($registration->status === 'rejected') text-red-600 @elseif($registration->status === 'expired') text-orange-600 @endif">
-                                                        {{ Str::limit($registration->history_note, 30) }}
+                                                        {{ Str::limit($historyNote, 30) }}
                                                     </span>
                                                 @else
                                                     -

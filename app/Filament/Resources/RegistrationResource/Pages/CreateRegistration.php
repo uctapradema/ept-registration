@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\RegistrationResource\Pages;
 
+use App\Constants\AppConstants;
 use App\Filament\Resources\RegistrationResource;
 use App\Models\Registration;
 use Filament\Resources\Pages\CreateRecord;
@@ -24,7 +25,7 @@ class CreateRegistration extends CreateRecord
             $schedule = \App\Models\ExamSchedule::find($data['exam_schedule_id']);
             $data['registration_number'] = Registration::generateRegistrationNumber($schedule);
             $data['unique_code'] = Registration::generateUniqueCode($schedule);
-            $data['expires_at'] = now()->addHours($schedule->payment_deadline_hours ?? Registration::DEFAULT_PAYMENT_DEADLINE_HOURS);
+            $data['expires_at'] = now()->addHours($schedule->payment_deadline_hours ?? AppConstants::DEFAULT_PAYMENT_DEADLINE_HOURS);
         }
 
         return $data;

@@ -1,16 +1,16 @@
 <?php
 
-namespace App\Filament\Resources\InputnilaiResource\Pages;
+namespace App\Filament\Resources\ScoringResource\Pages;
 
-use App\Filament\Resources\InputnilaiResource;
+use App\Filament\Resources\ScoringResource;
 use App\Models\ExamSchedule;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Actions;
 use Filament\Forms\Components\Select;
 
-class ListInputnilais extends ListRecords
+class ListScorings extends ListRecords
 {
-    protected static string $resource = InputnilaiResource::class;
+    protected static string $resource = ScoringResource::class;
 
     protected function getHeaderActions(): array
     {

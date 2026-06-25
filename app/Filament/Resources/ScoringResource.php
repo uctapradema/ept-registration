@@ -2,9 +2,7 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\InputnilaiResource\Pages;
-use App\Filament\Resources\InputnilaiResource\RelationManagers;
-use App\Models\Inputnilai;
+use App\Filament\Resources\ScoringResource\Pages;
 use App\Models\Registration;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -13,7 +11,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
-class InputnilaiResource extends Resource
+class ScoringResource extends Resource
 {
     protected static ?string $model = Registration::class;
 
@@ -140,7 +138,7 @@ class InputnilaiResource extends Resource
                     ])
                     ->action(function (Registration $record, array $data): void {
                         $average = round(($data['listening_score'] + $data['structure_score'] + $data['reading_score']) / 3, 2);
-                        
+
                         $record->update([
                             'listening_score' => $data['listening_score'],
                             'structure_score' => $data['structure_score'],
@@ -180,7 +178,7 @@ class InputnilaiResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListInputnilais::route('/'),
+            'index' => Pages\ListScorings::route('/'),
         ];
     }
 }

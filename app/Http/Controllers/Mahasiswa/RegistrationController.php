@@ -9,20 +9,23 @@ use App\Http\Requests\Mahasiswa\CancelRegistrationRequest;
 use App\Http\Requests\Mahasiswa\StorePaymentRequest;
 use App\Models\ExamSchedule;
 use App\Models\Registration;
+use App\Services\FileStorageService;
+use App\Services\ResponseService;
 use App\Services\RegistrationService;
-use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
 
 class RegistrationController extends Controller
 {
     public function __construct(
-        private RegistrationService $registrationService
+        private RegistrationService $registrationService,
+        private FileStorageService $fileStorageService,
+        private ResponseService $responseService
     ) {}
 
     public function index()
     {
         $registrations = Registration::with('examSchedule')
-            ->where('user_id', auth()->id())
+            ->forUser(auth()->id())
             ->latest()
             ->paginate(10);
 
@@ -35,7 +38,7 @@ class RegistrationController extends Controller
         
         if ($user->hasActiveRegistration()) {
             $existingRegistration = Registration::with('examSchedule')
-                ->where('user_id', $user->id)
+                ->forUser($user->id)
                 ->active()
                 ->first();
             
@@ -104,15 +107,16 @@ class RegistrationController extends Controller
         $this->validatePaymentStatus($registration);
 
         try {
-            $file = $request->file('payment_proof');
-            $path = $this->storePaymentFile($file, $registration);
-
+            $path = $this->fileStorageService->storePaymentProof($request->file('payment_proof'));
             $this->registrationService->uploadPayment($registration, $path, $request->payment_note);
 
-            return $this->buildResponse($request, $registration);
+            $message = 'Bukti pembayaran berhasil diupload. Menunggu verifikasi.';
+            $redirect = route('mahasiswa.registrations.show', $registration);
+
+            return $this->responseService->success($request, $message, $redirect);
 
         } catch (\Exception $e) {
-            return $this->handleError($request, $e);
+            return $this->responseService->error($request, $e->getMessage());
         }
     }
 
@@ -167,44 +171,5 @@ class RegistrationController extends Controller
         if ($registration->isExpired()) {
             throw new \RuntimeException('Batas waktu pembayaran telah habis.');
         }
-    }
-
-    private function storePaymentFile($file, Registration $registration): string
-    {
-        $extension = $file->getClientOriginalExtension();
-        $safeExtension = preg_replace('/[^a-zA-Z0-9]/', '', strtolower($extension));
-
-        $randomName = bin2hex(random_bytes(16));
-        $fileName = $randomName . '.' . $safeExtension;
-
-        return $file->storeAs('payments', $fileName, 'public');
-    }
-
-    private function buildResponse(Request $request, Registration $registration)
-    {
-        $message = 'Bukti pembayaran berhasil diupload. Menunggu verifikasi.';
-        $redirect = route('mahasiswa.registrations.show', $registration);
-
-        if ($request->ajax() || $request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => $message,
-                'redirect' => $redirect,
-            ]);
-        }
-
-        return redirect($redirect)->with('success', $message);
-    }
-
-    private function handleError(Request $request, \Exception $e)
-    {
-        if ($request->ajax() || $request->wantsJson()) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 500);
-        }
-
-        return redirect()->back()->with('error', $e->getMessage());
     }
 }

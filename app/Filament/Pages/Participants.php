@@ -2,8 +2,8 @@
 
 namespace App\Filament\Pages;
 
+use App\Services\ExportService;
 use Filament\Pages\Page;
-use App\Models\Registration;
 use Illuminate\Http\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -29,8 +29,9 @@ class Participants extends Page
 
     protected function getViewData(): array
     {
-        $query = $this->buildBaseQuery();
-        $this->registrations = $query->get();
+        $this->registrations = app(ExportService::class)
+            ->getParticipantsQuery($this->examScheduleId)
+            ->get();
 
         return [
             'registrations' => $this->registrations,
@@ -38,103 +39,30 @@ class Participants extends Page
         ];
     }
 
-    private function buildBaseQuery()
-    {
-        $query = Registration::with(['user', 'examSchedule'])
-            ->where('status', 'verified')
-            ->orderBy('payment_verified_at', 'asc');
-
-        if ($this->examScheduleId) {
-            $query->where('exam_schedule_id', $this->examScheduleId);
-        }
-
-        return $query;
-    }
-
     public function exportExcel(): StreamedResponse
     {
         $examScheduleId = request()->get('exam_schedule_id');
-
-        $query = Registration::with(['user', 'examSchedule'])
-            ->where('status', 'verified')
-            ->orderBy('payment_verified_at', 'asc');
-
-        if ($examScheduleId) {
-            $query->where('exam_schedule_id', $examScheduleId);
-        }
-
-        $registrations = $query->get();
-        $filename = $this->generateFilename($examScheduleId);
+        $exportService = app(ExportService::class);
+        $filename = $exportService->generateFilename($examScheduleId);
 
         $headers = [
             'Content-Type' => 'text/csv',
             'Content-Disposition' => 'attachment; filename="' . $filename . '.csv"',
         ];
 
-        $callback = function () use ($registrations) {
-            $handle = fopen('php://output', 'w');
-
-            fputcsv($handle, ['No', 'No. Pendaftaran', 'Nama', 'NIM', 'Prodi', 'Fakultas', 'Jadwal', 'Tanggal Ujian', 'Tgl Verifikasi']);
-
-            $no = 1;
-            foreach ($registrations as $reg) {
-                fputcsv($handle, [
-                    $no++,
-                    $reg->registration_number,
-                    $reg->user->name ?? '-',
-                    $reg->user->nim ?? '-',
-                    $reg->user->major ?? '-',
-                    $reg->user->faculty ?? '-',
-                    $reg->examSchedule->title ?? '-',
-                    $reg->examSchedule->exam_date?->format('d F Y') ?? '-',
-                    $reg->payment_verified_at?->format('d F Y, H:i') ?? '-',
-                ]);
-            }
-
-            fclose($handle);
-        };
-
-        return response()->stream($callback, 200, $headers);
+        return response()->stream(function () use ($examScheduleId) {
+            app(ExportService::class)->generateCsv($examScheduleId);
+        }, 200, $headers);
     }
 
     public function printPdf(): Response
     {
         $examScheduleId = request()->get('exam_schedule_id');
 
-        $query = Registration::with(['user', 'examSchedule'])
-            ->where('status', 'verified')
-            ->orderBy('payment_verified_at', 'asc');
-
-        if ($examScheduleId) {
-            $query->where('exam_schedule_id', $examScheduleId);
-        }
-
-        $registrations = $query->get();
-
         return response()->make(
-            view('filament.pages.participants-print', [
-                'registrations' => $registrations,
-            ])->render(),
+            app(ExportService::class)->getPrintView($examScheduleId),
             200,
             ['Content-Type' => 'text/html']
         );
-    }
-
-    private function generateFilename(?int $scheduleId): string
-    {
-        $base = 'daftar_peserta_ept';
-
-        if ($scheduleId) {
-            $examSchedule = \App\Models\ExamSchedule::find($scheduleId);
-            if ($examSchedule) {
-                $title = str_replace(' ', '_', $examSchedule->title);
-                $session = $examSchedule->session;
-                $date = $examSchedule->exam_date?->format('Y-m-d') ?? date('Y-m-d');
-
-                return "{$title}_Sesi{$session}_{$date}";
-            }
-        }
-
-        return $base . '_' . date('Y-m-d');
     }
 }

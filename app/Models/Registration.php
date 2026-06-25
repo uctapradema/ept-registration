@@ -97,6 +97,26 @@ class Registration extends Model
         return null;
     }
 
+    public function scopeForUser($query, int $userId)
+    {
+        return $query->where('user_id', $userId);
+    }
+
+    public function scopeForSchedule($query, int $scheduleId)
+    {
+        return $query->where('exam_schedule_id', $scheduleId);
+    }
+
+    public function scopeAwaitingVerification($query)
+    {
+        return $query->where('status', RegistrationStatus::AWAITING_VERIFICATION->value);
+    }
+
+    public function scopeVerified($query)
+    {
+        return $query->where('status', RegistrationStatus::VERIFIED->value);
+    }
+
     public function scopeActive($query)
     {
         return $query->whereIn('status', [

@@ -3,11 +3,11 @@
 namespace App\Filament\Resources;
 
 use App\Enums\RegistrationStatus;
+use App\Filament\Actions\RejectPaymentAction;
+use App\Filament\Actions\VerifyPaymentAction;
 use App\Filament\Resources\RegistrationResource\Pages;
 use App\Models\Registration;
 use App\Models\User;
-use App\Notifications\PaymentVerifiedNotification;
-use App\Notifications\PaymentRejectedNotification;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -228,61 +228,8 @@ class RegistrationResource extends Resource
                     ->native(false),
             ])
             ->actions([
-                Tables\Actions\Action::make('verify')
-                    ->label('Verifikasi')
-                    ->icon('heroicon-o-check-circle')
-                    ->color('success')
-                    ->requiresConfirmation()
-                    ->modalHeading('Verifikasi Pembayaran')
-                    ->modalDescription('Apakah Anda yakin ingin memverifikasi pembayaran ini?')
-                    ->modalSubmitActionLabel('Ya, Verifikasi')
-                    ->visible(fn (Registration $record): bool =>
-                        in_array($record->status, [RegistrationStatus::AWAITING_VERIFICATION->value, RegistrationStatus::PENDING_PAYMENT->value]) &&
-                        (auth()->user()?->isAdmin() || auth()->user()?->isFinance())
-                    )
-                    ->action(function (Registration $record): void {
-                        $record->update([
-                            'status' => RegistrationStatus::VERIFIED->value,
-                            'payment_verified_at' => now(),
-                            'verified_by' => auth()->id(),
-                        ]);
-
-                        // Send notification email
-                        $record->load(['user', 'examSchedule']);
-                        $record->user->notify(new PaymentVerifiedNotification($record));
-                    }),
-
-                Tables\Actions\Action::make('reject')
-                    ->label('Tolak')
-                    ->icon('heroicon-o-x-circle')
-                    ->color('danger')
-                    ->form([
-                        Forms\Components\Textarea::make('rejection_reason')
-                            ->label('Alasan Penolakan')
-                            ->required()
-                            ->rows(3)
-                            ->maxLength(65535),
-                    ])
-                    ->modalHeading('Tolak Pembayaran')
-                    ->modalDescription('Berikan alasan penolakan pembayaran ini.')
-                    ->modalSubmitActionLabel('Ya, Tolak')
-                    ->visible(fn (Registration $record): bool =>
-                        in_array($record->status, [RegistrationStatus::AWAITING_VERIFICATION->value, RegistrationStatus::PENDING_PAYMENT->value, RegistrationStatus::VERIFIED->value]) &&
-                        (auth()->user()?->isAdmin() || auth()->user()?->isFinance())
-                    )
-->action(function (Registration $record, array $data): void {
-                        $record->update([
-                            'status' => RegistrationStatus::REJECTED->value,
-                            'rejection_reason' => $data['rejection_reason'],
-                            'payment_verified_at' => null,
-                            'verified_by' => null,
-                        ]);
-
-                        // Send notification email
-                        $record->load(['user', 'examSchedule']);
-                        $record->user->notify(new PaymentRejectedNotification($record));
-                    }),
-
+                VerifyPaymentAction::make(),
+                RejectPaymentAction::make(),
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make()
                     ->visible(fn (): bool => auth()->user()?->isAdmin() ?? false),
@@ -302,7 +249,7 @@ class RegistrationResource extends Resource
         $user = auth()->user();
 
         if ($user?->isMahasiswa()) {
-            $query->where('user_id', $user->id);
+            $query->forUser($user->id);
         }
 
         return $query;
@@ -320,7 +267,6 @@ class RegistrationResource extends Resource
             'create' => Pages\CreateRegistration::route('/create'),
             'view' => Pages\ViewRegistration::route('/{record}'),
             'edit' => Pages\EditRegistration::route('/{record}/edit'),
-            'input-nilai' => Pages\InputNilai::route('/input-nilai'),
         ];
     }
 

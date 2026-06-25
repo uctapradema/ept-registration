@@ -15,13 +15,13 @@ class DashboardController extends Controller
         $user = Auth::user();
         
         $activeRegistration = Registration::with('examSchedule')
-            ->where('user_id', $user->id)
+            ->forUser($user->id)
             ->active()
             ->latest()
             ->first();
 
         $recentRegistrations = Registration::with('examSchedule')
-            ->where('user_id', $user->id)
+            ->forUser($user->id)
             ->history()
             ->latest()
             ->take(5)

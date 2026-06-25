@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\ScoringResource\Pages;
 use App\Models\Registration;
+use App\Services\ScoringService;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -137,17 +138,13 @@ class ScoringResource extends Resource
                             ]),
                     ])
                     ->action(function (Registration $record, array $data): void {
-                        $average = round(($data['listening_score'] + $data['structure_score'] + $data['reading_score']) / 3, 2);
-
-                        $record->update([
-                            'listening_score' => $data['listening_score'],
-                            'structure_score' => $data['structure_score'],
-                            'reading_score' => $data['reading_score'],
-                            'average_score' => $average,
-                            'graded_by' => auth()->user()?->id(),
-                            'graded_at' => now(),
-                            'ready_for_scoring' => false,
-                        ]);
+                        app(ScoringService::class)->inputScores(
+                            $record,
+                            $data['listening_score'],
+                            $data['structure_score'],
+                            $data['reading_score'],
+                            auth()->user()
+                        );
                     })
                     ->fillForm(fn (Registration $record): array => [
                         'listening_score' => $record->listening_score,
@@ -161,9 +158,9 @@ class ScoringResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->where('status', 'verified')
+            ->verified()
             ->where(function ($query) {
-                $query->where('ready_for_scoring', true)
+                $query->readyForScoring()
                     ->orWhereNotNull('graded_at');
             });
     }

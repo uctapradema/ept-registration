@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Mahasiswa;
 
 use App\Constants\AppConstants;
 use App\Enums\RegistrationStatus;
+use App\Exceptions\RegistrationException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Mahasiswa\StoreRegistrationRequest;
 use App\Http\Requests\Mahasiswa\CancelRegistrationRequest;
@@ -150,8 +151,7 @@ class RegistrationController extends Controller
         $this->authorize('viewCard', $registration);
 
         if ($registration->status !== RegistrationStatus::VERIFIED) {
-            return redirect()->route('mahasiswa.registrations.show', $registration)
-                ->with('error', 'Kartu ujian hanya tersedia untuk pendaftaran yang telah terverifikasi.');
+            throw RegistrationException::examCardNotAvailable();
         }
 
         $registration->load('examSchedule', 'user');
@@ -170,11 +170,11 @@ class RegistrationController extends Controller
     private function validatePaymentStatus(Registration $registration): void
     {
         if ($registration->status !== RegistrationStatus::PENDING_PAYMENT) {
-            throw new \RuntimeException('Pembayaran sudah dilakukan atau status tidak valid.');
+            throw RegistrationException::invalidPaymentStatus();
         }
 
         if ($registration->isExpired()) {
-            throw new \RuntimeException('Batas waktu pembayaran telah habis.');
+            throw RegistrationException::paymentExpired();
         }
     }
 }

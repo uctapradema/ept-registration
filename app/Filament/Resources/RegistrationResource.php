@@ -9,7 +9,6 @@ use App\Filament\Columns\RegistrationColumns;
 use App\Filament\Filters\RegistrationFilters;
 use App\Filament\Resources\RegistrationResource\Pages;
 use App\Models\Registration;
-use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;

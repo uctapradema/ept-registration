@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\ExamSchedule;
 use App\Models\Registration;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Collection;
 
 class ExportService
 {

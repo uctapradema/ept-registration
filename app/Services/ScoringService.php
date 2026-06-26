@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Constants\AppConstants;
+use App\Exceptions\ScoringException;
 use App\Models\Registration;
 use App\Models\User;
 
@@ -48,8 +49,10 @@ class ScoringService
 
         foreach ($scores as $component => $score) {
             if ($score < AppConstants::MIN_SCORE || $score > AppConstants::MAX_SCORE) {
-                throw new \InvalidArgumentException(
-                    "Score {$component} must be between " . AppConstants::MIN_SCORE . " and " . AppConstants::MAX_SCORE
+                throw ScoringException::scoreOutOfRange(
+                    $component,
+                    AppConstants::MIN_SCORE,
+                    AppConstants::MAX_SCORE
                 );
             }
         }

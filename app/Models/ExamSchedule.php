@@ -94,11 +94,6 @@ class ExamSchedule extends Model
         return self::SESSIONS[$session] ?? self::SESSIONS['01'];
     }
 
-    public function getSessionLabelAttribute(): string
-    {
-        return self::SESSIONS[$this->session]['label'] ?? '-';
-    }
-
     public function isAvailable(): bool
     {
         return $this->is_active

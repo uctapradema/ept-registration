@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Constants\AppConstants;
 use App\Enums\RegistrationStatus;
 use App\Events\RegistrationStatusChanged;
+use App\Exceptions\RegistrationException;
 use App\Models\ExamSchedule;
 use App\Models\Registration;
 use App\Models\User;
@@ -20,7 +21,7 @@ class RegistrationService
                 ->first();
 
             if ($lockedSchedule->availableQuota() <= 0) {
-                throw new \RuntimeException('Kuota untuk jadwal ini sudah penuh.');
+                throw RegistrationException::quotaFull();
             }
 
             $registrationNumber = Registration::generateRegistrationNumber($schedule);

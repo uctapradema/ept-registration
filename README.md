@@ -786,4 +786,4 @@ Untuk pertanyaan atau issue, silakan buat GitHub Issue.
 
 ---
 
-**Dibuat dengan ❤️ menggunakan Laravel 12 & Filament 3**
+**Dibuat dengan 🚬☕ menggunakan Laravel 12 & Filament 3**

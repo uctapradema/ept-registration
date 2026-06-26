@@ -38,7 +38,7 @@ class RegistrationController extends Controller
         return view('mahasiswa.registrations.index', compact('registrations'));
     }
 
-    public function create(int $scheduleId): View|RedirectResponse
+    public function create(ExamSchedule $schedule): View|RedirectResponse
     {
         $user = auth()->user();
 
@@ -51,8 +51,6 @@ class RegistrationController extends Controller
             return redirect()->route('mahasiswa.registrations.show', $existingRegistration)
                 ->with('warning', 'Anda sudah memiliki pendaftaran aktif. Selesaikan atau batalkan pendaftaran sebelumnya terlebih dahulu.');
         }
-
-        $schedule = ExamSchedule::findOrFail($scheduleId);
 
         if (! $schedule->isAvailable()) {
             return redirect()->route('mahasiswa.schedules.index')

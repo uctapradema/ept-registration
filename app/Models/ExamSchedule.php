@@ -8,11 +8,26 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class ExamSchedule extends Model
 {
     use HasFactory;
     use SoftDeletes;
+
+    protected static function booted(): void
+    {
+        static::creating(function (ExamSchedule $schedule) {
+            if (empty($schedule->uuid)) {
+                $schedule->uuid = Str::uuid()->toString();
+            }
+        });
+    }
+
+    public function getRouteKeyName(): string
+    {
+        return 'uuid';
+    }
 
     private const SESSIONS = [
         '01' => ['label' => 'Pagi', 'start' => '09:00', 'end' => '11:00'],
@@ -21,6 +36,7 @@ class ExamSchedule extends Model
     ];
 
     protected $fillable = [
+        'uuid',
         'title',
         'session',
         'exam_date',

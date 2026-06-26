@@ -32,6 +32,37 @@
                         </a>
                     </div>
 
+                    <!-- Search & Filter -->
+                    <form method="GET" class="mb-4">
+                        <div class="flex flex-col sm:flex-row gap-3">
+                            <input type="text" 
+                                   name="search" 
+                                   placeholder="Cari nomor pendaftaran atau jadwal..."
+                                   value="{{ request('search') }}"
+                                   class="flex-1 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                            <select name="status" 
+                                    class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                                <option value="">Semua Status</option>
+                                <option value="pending_payment" {{ request('status') === 'pending_payment' ? 'selected' : '' }}>Menunggu Pembayaran</option>
+                                <option value="awaiting_verification" {{ request('status') === 'awaiting_verification' ? 'selected' : '' }}>Menunggu Verifikasi</option>
+                                <option value="verified" {{ request('status') === 'verified' ? 'selected' : '' }}>Terverifikasi</option>
+                                <option value="rejected" {{ request('status') === 'rejected' ? 'selected' : '' }}>Ditolak</option>
+                                <option value="cancelled" {{ request('status') === 'cancelled' ? 'selected' : '' }}>Dibatalkan</option>
+                                <option value="expired" {{ request('status') === 'expired' ? 'selected' : '' }}>Kadaluarsa</option>
+                            </select>
+                            <button type="submit" 
+                                    class="px-4 py-2 bg-gray-800 dark:bg-gray-600 hover:bg-gray-700 dark:hover:bg-gray-500 text-white text-sm font-medium rounded-md transition">
+                                Filter
+                            </button>
+                            @if(request('search') || request('status'))
+                                <a href="{{ route('mahasiswa.registrations.index') }}" 
+                                   class="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-md transition">
+                                    Reset
+                                </a>
+                            @endif
+                        </div>
+                    </form>
+
                     @if($registrations->count() > 0)
                         <div class="overflow-x-auto">
                             <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">

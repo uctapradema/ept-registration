@@ -43,21 +43,17 @@
 
                     <!-- Countdown Timer for Pending Payment -->
                     @if($registration->status === 'pending_payment' && !$registration->isExpired())
-                        @php
-                            $hoursLeft = now()->diffInHours($registration->expires_at, false);
-                            $isUrgent = $hoursLeft <= 4;
-                        @endphp
-                        <div class="mb-4 sm:mb-6 p-3 sm:p-4 {{ $isUrgent ? 'bg-red-50 border-red-200' : 'bg-yellow-50 border-yellow-200' }} border rounded-lg">
+                        <div class="mb-4 sm:mb-6 p-3 sm:p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
                             <div class="flex items-start">
-                                <svg class="h-5 w-5 {{ $isUrgent ? 'text-red-500' : 'text-yellow-500' }} mr-2 sm:mr-3 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <svg class="h-5 w-5 text-yellow-500 mr-2 sm:mr-3 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                                 <div>
-                                    <p class="text-xs sm:text-sm font-medium {{ $isUrgent ? 'text-red-800' : 'text-yellow-800' }} dark:text-yellow-200">
+                                    <p class="text-xs sm:text-sm font-medium text-yellow-800 dark:text-yellow-200">
                                         Sisa Waktu Pembayaran
                                     </p>
-                                    <p class="text-base sm:text-lg font-bold {{ $isUrgent ? 'text-red-600' : 'text-yellow-700' }}" id="countdown">
-                                        {{ now()->diff($registration->expires_at)->format('%h jam %i menit') }}
+                                    <p class="text-base sm:text-lg font-bold text-yellow-700 dark:text-yellow-300" id="countdown">
+                                        Memuat...
                                     </p>
                                 </div>
                             </div>
@@ -147,7 +143,7 @@
                                         Pilih File
                                     </label>
                                     <input type="file" id="payment_proof" name="payment_proof" class="hidden" accept=".jpg,.jpeg,.png,.pdf" onchange="showPreview(this)">
-                                    <span class="ml-3 text-sm text-gray-500 dark:text-gray-400">Format: JPG, PNG, PDF (Max 5MB)</span>
+                                    <span class="ml-3 text-sm text-gray-500 dark:text-gray-400">Format: JPG, PNG, PDF (Max 2MB)</span>
                                 </div>
 
                                 <!-- Preview File -->
@@ -348,6 +344,44 @@
     </div>
 
     <script>
+        // Countdown Timer
+        @if($registration->status === 'pending_payment' && !$registration->isExpired())
+        function startCountdown() {
+            const expiresAt = new Date('{{ $registration->expires_at->toIso8601String() }}').getTime();
+            const countdownEl = document.getElementById('countdown');
+            
+            function updateCountdown() {
+                const now = new Date().getTime();
+                const distance = expiresAt - now;
+
+                if (distance < 0) {
+                    countdownEl.innerHTML = '<span class="text-red-600 font-bold">KADALUARSA</span>';
+                    countdownEl.parentElement.parentElement.parentElement.classList.remove('bg-yellow-50', 'border-yellow-200', 'dark:bg-yellow-900/20', 'dark:border-yellow-800');
+                    countdownEl.parentElement.parentElement.parentElement.classList.add('bg-red-50', 'border-red-200', 'dark:bg-red-900/20', 'dark:border-red-800');
+                    setTimeout(() => location.reload(), 2000);
+                    return;
+                }
+
+                const hours = Math.floor(distance / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                countdownEl.innerHTML = `${hours}j ${minutes}m ${seconds}s`;
+
+                // Change color when urgent (less than 4 hours)
+                if (hours < 4) {
+                    countdownEl.classList.remove('text-yellow-700', 'dark:text-yellow-300');
+                    countdownEl.classList.add('text-red-600', 'dark:text-red-400');
+                }
+            }
+
+            updateCountdown();
+            setInterval(updateCountdown, 1000);
+        }
+
+        document.addEventListener('DOMContentLoaded', startCountdown);
+        @endif
+
         function showPreview(input) {
             var file = input.files[0];
             if (!file) return;
@@ -359,9 +393,9 @@
                 return;
             }
 
-            var maxSize = 5 * 1024 * 1024;
+            var maxSize = 2 * 1024 * 1024;
             if (file.size > maxSize) {
-                alert('Ukuran file maksimal 5MB!');
+                alert('Ukuran file maksimal 2MB!');
                 input.value = '';
                 return;
             }

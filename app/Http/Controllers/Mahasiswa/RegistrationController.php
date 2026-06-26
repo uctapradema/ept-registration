@@ -30,10 +30,23 @@ class RegistrationController extends Controller
 
     public function index(): View
     {
-        $registrations = Registration::with('examSchedule')
-            ->forUser(auth()->id())
-            ->latest()
-            ->paginate(AppConstants::DEFAULT_PAGE_SIZE);
+        $query = Registration::with('examSchedule')
+            ->forUser(auth()->id());
+
+        if ($search = request('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('registration_number', 'like', "%{$search}%")
+                  ->orWhereHas('examSchedule', function ($q2) use ($search) {
+                      $q2->where('title', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        if ($status = request('status')) {
+            $query->where('status', $status);
+        }
+
+        $registrations = $query->latest()->paginate(10)->withQueryString();
 
         return view('mahasiswa.registrations.index', compact('registrations'));
     }

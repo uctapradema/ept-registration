@@ -13,5 +13,5 @@ Artisan::command('inspire', function () {
 // Schedule the expired registrations check to run every hour
 Schedule::command(CheckExpiredRegistrations::class)->hourly();
 
-// Schedule enable exam scoring to run every minute
-Schedule::command(EnableExamScoring::class)->everyMinute();
+// Schedule enable exam scoring to run every 5 minutes
+Schedule::command(EnableExamScoring::class)->everyFiveMinutes();

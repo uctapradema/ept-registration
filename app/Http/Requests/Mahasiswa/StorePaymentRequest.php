@@ -19,9 +19,10 @@ class StorePaymentRequest extends FormRequest
                 'required',
                 'file',
                 'mimes:jpg,jpeg,png,pdf',
-                'max:5120',
+                'max:2048',
                 File::image()
                     ->types(['jpeg', 'png', 'jpg'])
+                    ->minResolution(100000)
                     ->and('application/pdf'),
             ],
             'payment_note' => 'nullable|string|max:500',
@@ -33,7 +34,7 @@ class StorePaymentRequest extends FormRequest
         return [
             'payment_proof.required' => 'File bukti pembayaran wajib diupload.',
             'payment_proof.mimes' => 'File harus berformat JPG, JPEG, PNG, atau PDF.',
-            'payment_proof.max' => 'Ukuran file maksimal 5MB.',
+            'payment_proof.max' => 'Ukuran file maksimal 2MB.',
             'payment_proof.file' => 'File tidak valid.',
             'payment_note.max' => 'Catatan maksimal :max karakter.',
         ];

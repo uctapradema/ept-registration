@@ -7,6 +7,7 @@ use App\Http\Controllers\Mahasiswa\RegistrationController;
 use App\Http\Controllers\Admin\ParticipantExportController;
 use App\Models\ExamSchedule;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\RateLimiter;
 
 Route::get('/', function () {
     $examSchedules = ExamSchedule::where('is_active', true)
@@ -39,10 +40,14 @@ Route::middleware(['auth', 'mahasiswa'])->prefix('mahasiswa')->name('mahasiswa.'
     // Registrations
     Route::get('/registrations', [RegistrationController::class, 'index'])->name('registrations.index');
     Route::get('/registrations/create/{schedule}', [RegistrationController::class, 'create'])->name('registrations.create');
-    Route::post('/registrations', [RegistrationController::class, 'store'])->name('registrations.store');
+    Route::post('/registrations', [RegistrationController::class, 'store'])
+        ->middleware('throttle:3,1')
+        ->name('registrations.store');
     Route::get('/registrations/{registration}', [RegistrationController::class, 'show'])->name('registrations.show');
     Route::get('/registrations/{registration}/payment', [RegistrationController::class, 'uploadPayment'])->name('registrations.payment');
-    Route::post('/registrations/{registration}/payment', [RegistrationController::class, 'storePayment'])->name('registrations.payment.store');
+    Route::post('/registrations/{registration}/payment', [RegistrationController::class, 'storePayment'])
+        ->middleware('throttle:5,1')
+        ->name('registrations.payment.store');
     Route::get('/registrations/{registration}/card', [RegistrationController::class, 'card'])->name('registrations.card');
     Route::delete('/registrations/{registration}', [RegistrationController::class, 'cancel'])->name('registrations.cancel');
 });

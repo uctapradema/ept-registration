@@ -1,0 +1,124 @@
+@startuml Activity Diagram - Registration Workflow
+!theme cerulean
+
+title Activity Diagram - EPT Registration Workflow
+
+|#LightBlue| Mahasiswa |
+|#LightGreen| System |
+|#LightYellow| Admin/Finance |
+
+|Mahasiswa|
+start
+:Open EPT Website;
+:Login with credentials;
+
+|System|
+:Verify credentials;
+if (Valid?) then (yes)
+    :Create session;
+else (no)
+    :Show error message;
+    stop
+endif
+
+|Mahasiswa|
+:View Dashboard;
+:Browse Exam Schedules;
+
+|System|
+:Query active schedules;
+:Check registration deadline;
+:Check available quota;
+
+|Mahasiswa|
+:Select schedule;
+:Click "Register";
+
+|System|
+:Check if user has active registration;
+if (Has active registration?) then (yes)
+    :Show warning message;
+    :Redirect to existing registration;
+    stop
+endif
+
+:Check schedule availability;
+if (Schedule available?) then (yes)
+    :Generate registration number;
+    :Generate unique code;
+    :Create registration (status: PENDING_PAYMENT);
+    :Set payment deadline;
+    :Dispatch RegistrationStatusChanged event;
+    :Send RegistrationSuccessNotification email;
+else (no)
+    :Show error message;
+    stop
+endif
+
+|Mahasiswa|
+:View registration details;
+:Note the unique code and total payment;
+:Make bank transfer;
+
+|Mahasiswa|
+:Upload payment proof;
+:Add payment note (optional);
+
+|System|
+:Validate file upload;
+:Store payment proof file;
+:Update registration (status: AWAITING_VERIFICATION);
+:Dispatch RegistrationStatusChanged event;
+
+|Admin/Finance|
+:View RegistrationResource table;
+:Review payment proof;
+:Click "Verifikasi" or "Tolak";
+
+if (Verify payment?) then (yes)
+    |System|
+    :Update status to VERIFIED;
+    :Set verified_by, payment_verified_at;
+    :Dispatch event;
+    :Send PaymentVerifiedNotification email;
+
+    |Mahasiswa|
+    :Receive verification email;
+    :Download Exam Card (PDF);
+    :Attend exam;
+
+    |Admin/Finance|
+    :Input exam scores;
+
+    |System|
+    :Validate scores (0-100);
+    :Calculate average score;
+    :Update registration with scores;
+    :Set graded_by, graded_at;
+
+else (no)
+    |Admin/Finance|
+    :Enter rejection reason;
+
+    |System|
+    :Update status to REJECTED;
+    :Set rejection_reason;
+    :Dispatch event;
+    :Send PaymentRejectedNotification email;
+
+    |Mahasiswa|
+    :Receive rejection email;
+    :Re-upload payment proof;
+    :Repeat payment flow;
+endif
+
+|System|
+:Check expired registrations (hourly);
+if (Payment deadline passed?) then (yes)
+    :Update status to EXPIRED;
+    :Dispatch event;
+endif
+
+stop
+
+@enduml

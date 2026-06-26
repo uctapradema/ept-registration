@@ -1,0 +1,93 @@
+@startuml Use Case Diagram
+!theme cerulean
+
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+skinparam usecaseStyle oval
+
+title Use Case Diagram - EPT Registration System
+
+actor "Mahasiswa" as M
+actor "Admin" as A
+actor "Finance" as F
+
+rectangle "EPT Registration System" {
+
+    package "Authentication" {
+        usecase "Register Account" as UC_REG
+        usecase "Login" as UC_LOGIN
+        usecase "Reset Password" as UC_RESET
+        usecase "Verify Email" as UC_VERIFY
+    }
+
+    package "Mahasiswa Features" {
+        usecase "Browse Exam Schedules" as UC_BROWSE
+        usecase "Register for Exam" as UC_REGISTER
+        usecase "Upload Payment Proof" as UC_UPLOAD
+        usecase "View Registration Status" as UC_VIEW_STATUS
+        usecase "Download Exam Card" as UC_CARD
+        usecase "Cancel Registration" as UC_CANCEL
+        usecase "View Dashboard" as UC_M_DASH
+    }
+
+    package "Admin Features" {
+        usecase "Manage Users" as UC_MANAGE_USER
+        usecase "Manage Exam Schedules" as UC_MANAGE_SCHEDULE
+        usecase "Manage Registrations" as UC_MANAGE_REG
+        usecase "Verify Payment" as UC_VERIFY_PAY
+        usecase "Reject Payment" as UC_REJECT_PAY
+        usecase "Input Exam Scores" as UC_SCORING
+        usecase "View Participants" as UC_PARTICIPANTS
+        usecase "Export Participant Data" as UC_EXPORT
+        usecase "View Dashboard" as UC_A_DASH
+    }
+
+    package "Finance Features" {
+        usecase "Verify Payment (Finance)" as UC_F_VERIFY
+        usecase "Reject Payment (Finance)" as UC_F_REJECT
+        usecase "Input Scores (Finance)" as UC_F_SCORING
+        usecase "View Participants (Finance)" as UC_F_PARTICIPANTS
+    }
+}
+
+' Mahasiswa relationships
+M --> UC_REG
+M --> UC_LOGIN
+M --> UC_RESET
+M --> UC_BROWSE
+M --> UC_REGISTER
+M --> UC_UPLOAD
+M --> UC_VIEW_STATUS
+M --> UC_CARD
+M --> UC_CANCEL
+M --> UC_M_DASH
+
+' Admin relationships
+A --> UC_LOGIN
+A --> UC_A_DASH
+A --> UC_MANAGE_USER
+A --> UC_MANAGE_SCHEDULE
+A --> UC_MANAGE_REG
+A --> UC_VERIFY_PAY
+A --> UC_REJECT_PAY
+A --> UC_SCORING
+A --> UC_PARTICIPANTS
+A --> UC_EXPORT
+
+' Finance relationships
+F --> UC_LOGIN
+F --> UC_A_DASH
+F --> UC_F_VERIFY
+F --> UC_F_REJECT
+F --> UC_F_SCORING
+F --> UC_F_PARTICIPANTS
+F --> UC_EXPORT
+
+' Include/Extend relationships
+UC_REGISTER ..> UC_BROWSE : <<include>>
+UC_UPLOAD ..> UC_VIEW_STATUS : <<extend>>
+UC_CARD ..> UC_VERIFY_PAY : <<extend>>
+UC_EXPORT ..> UC_PARTICIPANTS : <<include>>
+
+@enduml

@@ -1,0 +1,217 @@
+@startuml Class Diagram
+!theme cerulean
+
+skinparam classAttributeIconSize 0
+skinparam classFontSize 12
+skinparam packageFontSize 14
+
+title Class Diagram - EPT Registration System
+
+package "Models" {
+    class User {
+        - id: int
+        - name: string
+        - email: string
+        - password: string
+        - role: string
+        - nim: string
+        - phone: string
+        - major: string
+        - faculty: string
+        --
+        + isAdmin(): bool
+        + isFinance(): bool
+        + isMahasiswa(): bool
+        + hasActiveRegistration(): bool
+    }
+
+    class Registration {
+        - id: int
+        - user_id: int
+        - exam_schedule_id: int
+        - registration_number: string
+        - status: RegistrationStatus
+        - payment_proof: string
+        - payment_uploaded_at: datetime
+        - payment_verified_at: datetime
+        - verified_by: int
+        - rejection_reason: text
+        - expires_at: datetime
+        - unique_code: int
+        - listening_score: int
+        - structure_score: int
+        - reading_score: int
+        - average_score: decimal
+        - graded_by: int
+        - graded_at: datetime
+        - ready_for_scoring: bool
+        --
+        + isExpired(): bool
+        + isAwaitingVerification(): bool
+        + canBeCancelled(): bool
+        + generateRegistrationNumber(): string {static}
+        + generateUniqueCode(): int {static}
+    }
+
+    class ExamSchedule {
+        - id: int
+        - title: string
+        - session: string
+        - exam_date: date
+        - start_time: time
+        - end_time: time
+        - quota: int
+        - registration_deadline: datetime
+        - payment_deadline_hours: int
+        - price: decimal
+        - bank_name: string
+        - bank_account: string
+        - account_holder: string
+        - is_active: bool
+        - created_by: int
+        - unique_code_min: int
+        - unique_code_max: int
+        --
+        + registeredCount(): int
+        + availableQuota(): int
+        + isAvailable(): bool
+        + getSessionOptions(): array {static}
+    }
+}
+
+package "Enums" {
+    enum RegistrationStatus {
+        PENDING_PAYMENT = 'pending_payment'
+        AWAITING_VERIFICATION = 'awaiting_verification'
+        VERIFIED = 'verified'
+        REJECTED = 'rejected'
+        CANCELLED = 'cancelled'
+        EXPIRED = 'expired'
+        --
+        + label(): string
+        + color(): string
+        + tailwindClasses(): string
+        + options(): array {static}
+    }
+}
+
+package "Services" {
+    class RegistrationService {
+        --
+        + createRegistration(): Registration
+        + cancelRegistration(): void
+        + uploadPayment(): void
+    }
+
+    class PaymentVerificationService {
+        --
+        + verify(): void
+        + reject(): void
+        + canVerify(): bool
+        + canReject(): bool
+    }
+
+    class ScoringService {
+        --
+        + inputScores(): Registration
+        + calculateAverage(): float
+        + isPassingScore(): bool
+    }
+
+    class ExportService {
+        --
+        + getParticipantsQuery(): Builder
+        + generateCsv(): void
+        + getPrintView(): string
+    }
+
+    class FileStorageService {
+        --
+        + storePaymentProof(): string
+    }
+
+    class ResponseService {
+        --
+        + success(): JsonResponse|RedirectResponse
+        + error(): JsonResponse|RedirectResponse
+    }
+}
+
+package "Events" {
+    class RegistrationStatusChanged {
+        + registration: Registration
+        + oldStatus: ?RegistrationStatus
+        + newStatus: RegistrationStatus
+    }
+}
+
+package "Listeners" {
+    class SendRegistrationNotification {
+        + handle(): void
+    }
+}
+
+package "Exceptions" {
+    class RegistrationException {
+        + quotaFull(): self {static}
+        + alreadyRegistered(): self {static}
+        + paymentExpired(): self {static}
+        + cannotBeCancelled(): self {static}
+        + invalidPaymentStatus(): self {static}
+        + examCardNotAvailable(): self {static}
+    }
+
+    class ScoringException {
+        + scoreOutOfRange(): self {static}
+        + notReadyForScoring(): self {static}
+    }
+}
+
+package "Policies" {
+    class RegistrationPolicy {
+        + viewAny(): bool
+        + view(): bool
+        + create(): bool
+        + update(): bool
+        + delete(): bool
+        + uploadPayment(): bool
+        + cancel(): bool
+        + viewCard(): bool
+    }
+
+    class ExamSchedulePolicy {
+        + viewAny(): bool
+        + create(): bool
+        + update(): bool
+        + delete(): bool
+    }
+
+    class UserPolicy {
+        + viewAny(): bool
+        + create(): bool
+        + update(): bool
+        + delete(): bool
+    }
+}
+
+' Relationships
+User "1" --> "*" Registration : has
+ExamSchedule "1" --> "*" Registration : has
+Registration --> RegistrationStatus : uses
+
+User "1" --> "*" ExamSchedule : creates
+
+RegistrationService ..> Registration : manages
+PaymentVerificationService ..> Registration : verifies
+ScoringService ..> Registration : scores
+ExportService ..> Registration : exports
+FileStorageService ..> Registration : stores
+
+RegistrationStatusChanged --> Registration
+SendRegistrationNotification ..> RegistrationStatusChanged : listens
+
+RegistrationPolicy ..> Registration
+ExamSchedulePolicy ..> ExamSchedule
+UserPolicy ..> User
+
+@enduml

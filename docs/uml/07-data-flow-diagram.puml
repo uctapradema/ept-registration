@@ -1,0 +1,74 @@
+@startuml Data Flow Diagram
+!theme cerulean
+
+title Data Flow Diagram (DFD) Level 1 - EPT Registration System
+
+left to right direction
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment center
+
+rectangle "External Entities" as EE {
+    [Mahasiswa]
+    [Admin]
+    [Finance]
+    [Email Server]
+    [File System]
+}
+
+rectangle "Processes" {
+    [P1: Registration\nManagement]
+    [P2: Payment\nVerification]
+    [P3: Scoring\nManagement]
+    [P4: Data Export]
+    [P5: Authentication\n& Authorization]
+    [P6: Notification\nManagement]
+}
+
+rectangle "Data Stores" as DS {
+    database "D1: Users" as D1
+    database "D2: Registrations" as D2
+    database "D3: Exam Schedules" as D3
+    database "D4: Files" as D4
+}
+
+' Registration Flow
+[Mahasiswa] --> [P1: Registration\nManagement] : Browse schedules\nRegister for exam\nCancel registration
+[P1: Registration\nManagement] --> [D3: Exam Schedules] : Query schedules\nCheck availability
+[P1: Registration\nManagement] --> [D2: Registrations] : Create registration\nUpdate status
+[P1: Registration\nManagement] --> [D1: Users] : Check user data
+
+' Payment Flow
+[Mahasiswa] --> [P1: Registration\nManagement] : Upload payment proof
+[P1: Registration\nManagement] --> [D4: Files] : Store payment proof
+[P1: Registration\nManagement] --> [D2: Registrations] : Update status\nto awaiting_verification
+[Admin] --> [P2: Payment\nVerification] : Verify/Reject payment
+[Finance] --> [P2: Payment\nVerification] : Verify/Reject payment
+[P2: Payment\nVerification] --> [D2: Registrations] : Update status\nSet verified_by\nSet rejection_reason
+[P2: Payment\nVerification] --> [P6: Notification\nManagement] : Dispatch event
+
+' Scoring Flow
+[Admin] --> [P3: Scoring\nManagement] : Input exam scores
+[Finance] --> [P3: Scoring\nManagement] : Input exam scores
+[P3: Scoring\nManagement] --> [D2: Registrations] : Update scores\nSet graded_by\nSet graded_at
+[P3: Scoring\nManagement] --> [P6: Notification\nManagement] : Dispatch event
+
+' Export Flow
+[Admin] --> [P4: Data Export] : View participants\nExport CSV\nPrint view
+[Finance] --> [P4: Data Export] : View participants\nExport CSV
+[P4: Data Export] --> [D2: Registrations] : Query registrations\nwith filters
+[P4: Data Export] --> [D1: Users] : Query user data
+[P4: Data Export] --> [D3: Exam Schedules] : Query schedule data
+
+' Auth Flow
+[Mahasiswa] --> [P5: Authentication\n& Authorization] : Login\nRegister account
+[Admin] --> [P5: Authentication\n& Authorization] : Login
+[Finance] --> [P5: Authentication\n& Authorization] : Login
+[P5: Authentication\n& Authorization] --> [D1: Users] : Verify credentials\nCheck roles
+
+' Notification Flow
+[P6: Notification\nManagement] --> [Email Server] : Send emails\n(Registration success\nPayment verified\nPayment rejected\nScore entered)
+[P1: Registration\nManagement] --> [P6: Notification\nManagement] : Dispatch events
+[P2: Payment\nVerification] --> [P6: Notification\nManagement] : Dispatch events
+[P3: Scoring\nManagement] --> [P6: Notification\nManagement] : Dispatch events
+
+@enduml

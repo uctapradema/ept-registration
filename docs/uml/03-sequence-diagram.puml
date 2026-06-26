@@ -1,0 +1,122 @@
+@startuml Sequence Diagram - Registration Flow
+!theme cerulean
+
+title Sequence Diagram - Registration & Payment Flow
+
+actor Mahasiswa as M
+actor Admin as A
+participant "Web Router" as Web
+participant "RegistrationController" as RC
+participant "RegistrationService" as RS
+participant "FileStorageService" as FS
+participant "PaymentVerificationService" as PVS
+participant "ExportService" as ES
+database "Database" as DB
+participant "Event Dispatcher" as Event
+participant "SendRegistrationNotification" as Listener
+participant "Email" as Email
+
+== Registration Flow ==
+
+M -> Web : GET /mahasiswa/schedules
+Web -> RC : index()
+RC -> DB : Query ExamSchedules
+DB --> RC : Schedules
+RC --> M : Show schedules list
+
+M -> Web : GET /mahasiswa/registrations/create/{schedule}
+Web -> RC : create($scheduleId)
+RC -> DB : Check hasActiveRegistration()
+RC -> DB : Check schedule.isAvailable()
+RC --> M : Show registration form
+
+M -> Web : POST /mahasiswa/registrations
+Web -> RC : store(StoreRegistrationRequest)
+RC -> RS : createRegistration($user, $schedule)
+RS -> DB : BEGIN TRANSACTION
+RS -> DB : lockForUpdate(ExamSchedule)
+RS -> DB : Check quota > 0
+RS -> DB : Generate registration_number
+RS -> DB : Generate unique_code
+RS -> DB : Create Registration
+RS -> DB : COMMIT
+RS -> Event : dispatch(RegistrationStatusChanged)
+Event -> Listener : handle()
+Listener -> Email : Send RegistrationSuccessNotification
+Email --> M : Email: "Pendaftaran Berhasil"
+RS --> RC : Registration
+RC --> M : Redirect to show page
+
+== Payment Upload Flow ==
+
+M -> Web : GET /mahasiswa/registrations/{id}/payment
+Web -> RC : uploadPayment($registration)
+RC -> RC : authorize('uploadPayment')
+RC -> RC : validatePaymentStatus()
+RC --> M : Show payment form
+
+M -> Web : POST /mahasiswa/registrations/{id}/payment
+Web -> RC : storePayment(StorePaymentRequest, $registration)
+RC -> RC : authorize('uploadPayment')
+RC -> RC : validatePaymentStatus()
+RC -> FS : storePaymentProof($file)
+FS -> DB : Store file in /payments
+FS --> RC : $path
+RC -> RS : uploadPayment($registration, $path, $note)
+RS -> DB : Update registration (status=AWAITING_VERIFICATION)
+RS -> Event : dispatch(RegistrationStatusChanged)
+RS --> RC : void
+RC -> RC : ResponseService->success()
+RC --> M : Redirect with success message
+
+== Payment Verification Flow (Admin/Finance) ==
+
+A -> Web : Login to /admin
+Web -> A : Show Filament Dashboard
+
+A -> Web : Navigate to Registrations
+Web -> A : Show RegistrationResource table
+
+A -> Web : Click "Verifikasi" button
+Web -> A : Show confirmation modal
+A -> Web : Confirm verification
+Web -> PVS : verify($registration, $verifier)
+PVS -> DB : BEGIN TRANSACTION
+PVS -> DB : Update status=VERIFIED
+PVS -> DB : Set verified_by, payment_verified_at
+PVS -> DB : COMMIT
+PVS -> Event : dispatch(RegistrationStatusChanged)
+Event -> Listener : handle()
+Listener -> Email : Send PaymentVerifiedNotification
+Email --> M : Email: "Pembayaran Diverifikasi"
+PVS --> Web : void
+Web --> A : Show success message
+
+== Payment Rejection Flow ==
+
+A -> Web : Click "Tolak" button
+Web -> A : Show rejection reason modal
+A -> Web : Submit rejection reason
+Web -> PVS : reject($registration, $reason, $rejector)
+PVS -> DB : BEGIN TRANSACTION
+PVS -> DB : Update status=REJECTED
+PVS -> DB : Set rejection_reason
+PVS -> DB : COMMIT
+PVS -> Event : dispatch(RegistrationStatusChanged)
+Event -> Listener : handle()
+Listener -> Email : Send PaymentRejectedNotification
+Email --> M : Email: "Pembayaran Ditolak"
+PVS --> Web : void
+Web --> A : Show success message
+
+== Exam Card Download ==
+
+M -> Web : GET /mahasiswa/registrations/{id}/card
+Web -> RC : card($registration)
+RC -> RC : authorize('viewCard')
+RC -> RC : Check status == VERIFIED
+RC -> DB : Load examSchedule, user
+RC -> RC : Generate PDF (DomPDF)
+RC --> M : Stream PDF file
+
+@enduml

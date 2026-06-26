@@ -1,0 +1,90 @@
+@startuml Sequence Diagram - Scoring Flow
+!theme cerulean
+
+title Sequence Diagram - Scoring Flow (Admin/Finance)
+
+actor Admin as A
+actor Finance as F
+participant "Filament Panel" as Panel
+participant "ScoringResource" as SR
+participant "ScoringService" as SS
+database "Database" as DB
+participant "Event Dispatcher" as Event
+participant "SendRegistrationNotification" as Listener
+participant "Email" as Email
+participant "RegistrationResource" as RR
+
+== View Participants for Scoring ==
+
+A -> Panel : Login as Admin
+Panel -> RR : Navigate to RegistrationResource
+RR -> DB : Query registrations (verified status)
+RR -> Panel : Show RegistrationResource table
+
+A -> Panel : Click "Input Nilai" button
+
+== Input Scores (Admin) ==
+
+Panel -> SR : ScoringResource->editForm()
+SR -> DB : Load registration with user + schedule
+SR -> Panel : Show scoring form
+
+A -> Panel : Enter scores (Listening, Structure, Reading)
+A -> Panel : Submit form
+
+Panel -> SR : ScoringResource->handleRecordOperation()
+SR -> SS : inputScores($registration, $data, $admin)
+SS -> SS : validateScores($listening, $structure, $reading)
+SS -> SS : isScoreInRange() check (0-100)
+SS -> SS : calculateAverage($listening, $structure, $reading)
+SS -> DB : BEGIN TRANSACTION
+SS -> DB : Update registration with scores
+SS -> DB : Set graded_by = $admin->id
+SS -> DB : Set graded_at = now()
+SS -> DB : Update ready_for_scoring = false
+SS -> DB : COMMIT
+
+SS -> Event : dispatch(RegistrationStatusChanged)
+Event -> Listener : handle()
+Listener -> Email : Send ScoreEnteredNotification
+Email --> A : Email: "Penilaian Telah Dijalankan"
+
+SS --> SR : Registration
+SR --> Panel : Redirect with success
+
+== Input Scores (Finance) ==
+
+F -> Panel : Login as Finance
+Panel -> SR : Navigate to ScoringResource
+SR -> DB : Query registrations (verified + no scores)
+SR -> Panel : Show ScoringResource table
+
+F -> Panel : Click "Input Nilai" button
+Panel -> SR : editForm()
+SR -> DB : Load registration
+SR -> Panel : Show scoring form
+
+F -> Panel : Enter scores
+F -> Panel : Submit form
+
+Panel -> SR : handleRecordOperation()
+SR -> SS : inputScores()
+SS -> SS : validateScores()
+SS -> SS : calculateAverage()
+SS -> DB : Update registration
+SS -> DB : Set graded_by = $finance->id
+SS -> DB : Set graded_at = now()
+
+SS -> Event : dispatch(RegistrationStatusChanged)
+Event -> Listener : handle()
+Listener -> Email : Send ScoreEnteredNotification
+Email --> F : Email: "Penilaian Telah Dijalankan"
+
+== View Scores ==
+
+A -> Panel : View RegistrationResource
+Panel -> DB : Query registrations with scores
+Panel -> Panel : Show scores in table columns
+Panel -> A : Display: Listening, Structure, Reading, Average, Status (Pass/Fail)
+
+@enduml

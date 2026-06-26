@@ -1,0 +1,83 @@
+@startuml Component Diagram
+!theme cerulean
+
+title Component Diagram - EPT Registration System
+
+package "Presentation Layer" {
+    [Filament Admin Panel]
+    [Filament Scoring Panel]
+    [Mahasiswa Web Routes]
+    [PDF Export (DomPDF)]
+}
+
+package "Application Layer" {
+    [Controllers]
+    [Filament Resources]
+    [Form Requests]
+    [Policies]
+    [Middleware]
+    [Events & Listeners]
+    [Exceptions]
+}
+
+package "Domain Layer" {
+    [Registration Service]
+    [Payment Verification Service]
+    [Scoring Service]
+    [Export Service]
+    [File Storage Service]
+    [Response Service]
+}
+
+package "Infrastructure Layer" {
+    [Eloquent Models]
+    [Database Migrations]
+    [Email Notifications]
+    [File Storage]
+}
+
+package "External Dependencies" {
+    [Laravel Framework]
+    [Filament PHP]
+    [Spatie Permission]
+    [DomPDF]
+    [Tailwind CSS]
+}
+
+' Presentation to Application
+[Filament Admin Panel] --> [Controllers]
+[Filament Admin Panel] --> [Filament Resources]
+[Filament Scoring Panel] --> [Filament Resources]
+[Mahasiswa Web Routes] --> [Controllers]
+[Mahasiswa Web Routes] --> [Form Requests]
+
+' Application to Domain
+[Controllers] --> [Registration Service]
+[Controllers] --> [Payment Verification Service]
+[Controllers] --> [Export Service]
+[Filament Resources] --> [Scoring Service]
+[Filament Resources] --> [Registration Service]
+[Filament Resources] --> [Payment Verification Service]
+[Events & Listeners] --> [Registration Service]
+[Events & Listeners] --> [Payment Verification Service]
+
+' Domain to Infrastructure
+[Registration Service] --> [Eloquent Models]
+[Payment Verification Service] --> [Eloquent Models]
+[Scoring Service] --> [Eloquent Models]
+[Export Service] --> [Eloquent Models]
+[File Storage Service] --> [File Storage]
+[Email Notifications] --> [Laravel Framework]
+
+' Infrastructure to External
+[Eloquent Models] --> [Laravel Framework]
+[Filament Resources] --> [Filament PHP]
+[Form Requests] --> [Laravel Framework]
+[Policies] --> [Spatie Permission]
+[PDF Export (DomPDF)] --> [DomPDF]
+
+' Security
+[Middleware] --> [Policies]
+[Policies] --> [Eloquent Models]
+
+@enduml

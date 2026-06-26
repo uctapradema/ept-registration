@@ -235,24 +235,341 @@ php artisan queue:work
 
 ## UML Documentation
 
-Dokumentasi UML tersedia di `docs/uml/`:
+Dokumentasi UML tersedia di `docs/uml/`. Berikut diagram-diagram utama:
 
-| Diagram | File | Deskripsi |
-|---------|------|-----------|
-| Use Case | `01-use-case-diagram.puml` | Aktor dan fitur sistem |
-| Class | `02-class-diagram.puml` | Struktur class dan relationships |
-| Sequence | `03-sequence-diagram.puml` | Alur registrasi & verifikasi |
-| Activity | `04-activity-diagram.puml` | Workflow lengkap |
-| Scoring | `05-sequence-scoring-flow.puml` | Alur input nilai |
-| Component | `06-component-diagram.puml` | Arsitektur 4-layer |
-| Data Flow | `07-data-flow-diagram.puml` | Alir data sistem |
+### Use Case Diagram
 
-**Cara Render:**
-1. Buka https://www.plantuml.com/plantuml/uml
-2. Copy isi file `.puml`
-3. Paste ke editor online
+```mermaid
+graph LR
+    subgraph Actors
+        M((Mahasiswa))
+        A((Admin))
+        F((Finance))
+    end
 
-Lihat `docs/uml/README.md` untuk dokumentasi lengkap.
+    subgraph Authentication
+        UC_REG[Register Account]
+        UC_LOGIN[Login]
+        UC_RESET[Reset Password]
+    end
+
+    subgraph "Mahasiswa Features"
+        UC_BROWSE[Browse Exam Schedules]
+        UC_REGISTER[Register for Exam]
+        UC_UPLOAD[Upload Payment Proof]
+        UC_VIEW_STATUS[View Registration Status]
+        UC_CARD[Download Exam Card]
+        UC_CANCEL[Cancel Registration]
+    end
+
+    subgraph "Admin Features"
+        UC_MANAGE_USER[Manage Users]
+        UC_MANAGE_SCHEDULE[Manage Exam Schedules]
+        UC_MANAGE_REG[Manage Registrations]
+        UC_VERIFY_PAY[Verify Payment]
+        UC_REJECT_PAY[Reject Payment]
+        UC_SCORING[Input Exam Scores]
+        UC_PARTICIPANTS[View Participants]
+        UC_EXPORT[Export Data]
+    end
+
+    subgraph "Finance Features"
+        UC_F_VERIFY[Verify Payment]
+        UC_F_REJECT[Reject Payment]
+        UC_F_SCORING[Input Scores]
+        UC_F_PARTICIPANTS[View Participants]
+    end
+
+    M --> UC_REG
+    M --> UC_LOGIN
+    M --> UC_BROWSE
+    M --> UC_REGISTER
+    M --> UC_UPLOAD
+    M --> UC_VIEW_STATUS
+    M --> UC_CARD
+    M --> UC_CANCEL
+
+    A --> UC_LOGIN
+    A --> UC_MANAGE_USER
+    A --> UC_MANAGE_SCHEDULE
+    A --> UC_MANAGE_REG
+    A --> UC_VERIFY_PAY
+    A --> UC_REJECT_PAY
+    A --> UC_SCORING
+    A --> UC_PARTICIPANTS
+    A --> UC_EXPORT
+
+    F --> UC_LOGIN
+    F --> UC_F_VERIFY
+    F --> UC_F_REJECT
+    F --> UC_F_SCORING
+    F --> UC_F_PARTICIPANTS
+    F --> UC_EXPORT
+
+    UC_REGISTER -.->|include| UC_BROWSE
+    UC_EXPORT -.->|include| UC_PARTICIPANTS
+```
+
+### Class Diagram
+
+```mermaid
+classDiagram
+    class User {
+        -int id
+        -string name
+        -string email
+        -string role
+        +isAdmin() bool
+        +isFinance() bool
+        +isMahasiswa() bool
+    }
+
+    class Registration {
+        -int id
+        -int user_id
+        -int exam_schedule_id
+        -string registration_number
+        -RegistrationStatus status
+        -int listening_score
+        -int structure_score
+        -int reading_score
+        -decimal average_score
+        +isExpired() bool
+        +canBeCancelled() bool
+    }
+
+    class ExamSchedule {
+        -int id
+        -string title
+        -string session
+        -date exam_date
+        -int quota
+        -decimal price
+        +registeredCount() int
+        +availableQuota() int
+        +isAvailable() bool
+    }
+
+    class RegistrationStatus {
+        <<enum>>
+        PENDING_PAYMENT
+        AWAITING_VERIFICATION
+        VERIFIED
+        REJECTED
+        CANCELLED
+        EXPIRED
+    }
+
+    class RegistrationService {
+        +createRegistration() Registration
+        +cancelRegistration() void
+        +uploadPayment() void
+    }
+
+    class PaymentVerificationService {
+        +verify() void
+        +reject() void
+    }
+
+    class ScoringService {
+        +inputScores() Registration
+        +calculateAverage() float
+    }
+
+    User "1" --> "*" Registration : has
+    ExamSchedule "1" --> "*" Registration : has
+    Registration --> RegistrationStatus : uses
+    RegistrationService ..> Registration : manages
+    PaymentVerificationService ..> Registration : verifies
+    ScoringService ..> Registration : scores
+```
+
+### Sequence Diagram - Registration Flow
+
+```mermaid
+sequenceDiagram
+    actor M as Mahasiswa
+    participant Web as Web Router
+    participant RC as RegistrationController
+    participant RS as RegistrationService
+    participant DB as Database
+    participant Event as Event Dispatcher
+    participant Email as Email
+
+    M->>Web: POST /mahasiswa/registrations
+    Web->>RC: store(StoreRegistrationRequest)
+    RC->>RS: createRegistration($user, $schedule)
+    RS->>DB: BEGIN TRANSACTION
+    RS->>DB: lockForUpdate(ExamSchedule)
+    RS->>DB: Check quota > 0
+    RS->>DB: Create Registration
+    RS->>DB: COMMIT
+    RS->>Event: dispatch(RegistrationStatusChanged)
+    Event->>Email: Send RegistrationSuccessNotification
+    Email-->>M: Email: "Pendaftaran Berhasil"
+    RS-->>RC: Registration
+    RC-->>M: Redirect to show page
+```
+
+### Sequence Diagram - Payment Verification Flow
+
+```mermaid
+sequenceDiagram
+    actor A as Admin/Finance
+    participant Panel as Filament Panel
+    participant PVS as PaymentVerificationService
+    participant DB as Database
+    participant Event as Event Dispatcher
+    participant Email as Email
+    participant M as Mahasiswa
+
+    A->>Panel: Click "Verifikasi" button
+    Panel->>PVS: verify($registration, $verifier)
+    PVS->>DB: BEGIN TRANSACTION
+    PVS->>DB: Update status=VERIFIED
+    PVS->>DB: Set verified_by, payment_verified_at
+    PVS->>DB: COMMIT
+    PVS->>Event: dispatch(RegistrationStatusChanged)
+    Event->>Email: Send PaymentVerifiedNotification
+    Email-->>M: Email: "Pembayaran Diverifikasi"
+    PVS-->>Panel: void
+    Panel-->>A: Show success message
+```
+
+### Activity Diagram - Registration Workflow
+
+```mermaid
+flowchart TD
+    Start((Start)) --> M_Login[Mahasiswa: Login]
+    M_Login --> S_Verify[System: Verify credentials]
+    S_Verify -->|Invalid| S_Error[System: Show error]
+    S_Error --> Stop1((Stop))
+    S_Verify -->|Valid| M_Browse[Mahasiswa: Browse Schedules]
+    M_Browse --> S_CheckQuota[System: Check quota]
+    S_CheckQuota -->|Available| M_Register[Mahasiswa: Register]
+    S_CheckQuota -->|Not available| S_ErrorMsg[System: Show error]
+    S_ErrorMsg --> Stop2((Stop))
+    M_Register --> S_CreateReg[System: Create registration]
+    S_CreateReg --> M_Upload[Mahasiswa: Upload payment]
+    M_Upload --> S_WaitVerify[System: Await verification]
+    S_WaitVerify --> A_Verify[Admin/Finance: Verify]
+    A_Verify -->|Verified| S_Verified[System: Status = VERIFIED]
+    S_Verified --> M_Download[Mahasiswa: Download card]
+    M_Download --> M_Exam[Mahasiswa: Attend exam]
+    A_Verify -->|Rejected| S_Rejected[System: Status = REJECTED]
+    S_Rejected --> M_ReUpload[Mahasiswa: Re-upload payment]
+    M_ReUpload --> M_Upload
+    M_Exam --> A_Score[Admin/Finance: Input scores]
+    A_Score --> S_SaveScores[System: Save scores]
+    S_SaveScores --> Stop3((Stop))
+
+    style Start fill:#4CAF50,color:#fff
+    style Stop1 fill:#f44336,color:#fff
+    style Stop2 fill:#f44336,color:#fff
+    style Stop3 fill:#2196F3,color:#fff
+```
+
+### Component Diagram - Architecture
+
+```mermaid
+graph TD
+    subgraph Presentation["Presentation Layer"]
+        AdminPanel["Filament Admin Panel"]
+        ScoringPanel["Filament Scoring Panel"]
+        MahasiswaWeb["Mahasiswa Web Routes"]
+    end
+
+    subgraph Application["Application Layer"]
+        Controllers["Controllers"]
+        FilamentRes["Filament Resources"]
+        Policies["Policies"]
+        EventsListeners["Events & Listeners"]
+    end
+
+    subgraph Domain["Domain Layer"]
+        RegService["Registration Service"]
+        PayService["Payment Verification Service"]
+        ScoreService["Scoring Service"]
+        ExportService["Export Service"]
+    end
+
+    subgraph Infrastructure["Infrastructure Layer"]
+        EloquentModels["Eloquent Models"]
+        Migrations["Database Migrations"]
+        EmailNotif["Email Notifications"]
+    end
+
+    AdminPanel --> Controllers
+    AdminPanel --> FilamentRes
+    ScoringPanel --> FilamentRes
+    MahasiswaWeb --> Controllers
+
+    Controllers --> RegService
+    Controllers --> PayService
+    FilamentRes --> ScoreService
+    FilamentRes --> RegService
+    EventsListeners --> RegService
+
+    RegService --> EloquentModels
+    PayService --> EloquentModels
+    ScoreService --> EloquentModels
+    ExportService --> EloquentModels
+
+    style Presentation fill:#E3F2FD,stroke:#1565C0
+    style Application fill:#E8F5E9,stroke:#2E7D32
+    style Domain fill:#FFF3E0,stroke:#E65100
+    style Infrastructure fill:#F3E5F5,stroke:#6A1B9A
+```
+
+### Data Flow Diagram (DFD)
+
+```mermaid
+graph LR
+    subgraph External["External Entities"]
+        M[Mahasiswa]
+        A[Admin]
+        F[Finance]
+        ES[Email Server]
+    end
+
+    subgraph Processes["Processes"]
+        P1["P1: Registration Management"]
+        P2["P2: Payment Verification"]
+        P3["P3: Scoring Management"]
+        P4["P4: Data Export"]
+        P5["P5: Authentication"]
+        P6["P6: Notification Management"]
+    end
+
+    subgraph DataStores["Data Stores"]
+        D1[("D1: Users")]
+        D2[("D2: Registrations")]
+        D3[("D3: Exam Schedules")]
+    end
+
+    M -->|Browse, Register| P1
+    A -->|Verify/Reject| P2
+    F -->|Verify/Reject| P2
+    A -->|Input scores| P3
+    F -->|Input scores| P3
+    A -->|View, Export| P4
+    M -->|Login| P5
+
+    P1 -->|Query| D3
+    P1 -->|Create/Update| D2
+    P2 -->|Update status| D2
+    P3 -->|Update scores| D2
+    P4 -->|Query| D2
+    P5 -->|Verify| D1
+    P1 -->|Dispatch event| P6
+    P6 -->|Send emails| ES
+
+    style External fill:#E3F2FD,stroke:#1565C0
+    style Processes fill:#E8F5E9,stroke:#2E7D32
+    style DataStores fill:#FFF3E0,stroke:#E65100
+```
+
+Lihat `docs/uml/DIAGRAMS.md` untuk versi lengkap semua diagram.
 
 ## Development
 

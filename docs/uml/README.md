@@ -2,39 +2,60 @@
 
 ## Overview
 
-Dokumentasi UML untuk aplikasi EPT Registration System yang telah di-refactor.
+Dokumentasi UML untuk aplikasi EPT Registration System. Tersedia dalam dua format:
+- **Mermaid.js** — Untuk rendering langsung di GitHub (recommended)
+- **PlantUML** — Untuk rendering di PlantUML editor
 
 ## Daftar Diagram
 
-| No | Diagram | File | Deskripsi |
-|----|---------|------|-----------|
-| 1 | Use Case | `01-use-case-diagram.puml` | Aktor (Mahasiswa, Admin, Finance) dan fitur-fitur sistem |
-| 2 | Class | `02-class-diagram.puml` | Struktur class, model, service, event, policy |
-| 3 | Sequence (Registration) | `03-sequence-diagram.puml` | Alur registrasi, upload pembayaran, verifikasi |
-| 4 | Activity | `04-activity-diagram.puml` | Workflow lengkap dari login sampai penilaian |
-| 5 | Sequence (Scoring) | `05-sequence-scoring-flow.puml` | Alur input nilai oleh Admin/Finance |
-| 6 | Component | `06-component-diagram.puml` | Arsitektur sistem (Presentation → Application → Domain → Infrastructure) |
-| 7 | Data Flow | `07-data-flow-diagram.puml` | Alir data antar proses dan data store |
+| No | Diagram | Mermaid | PlantUML | Deskripsi |
+|----|---------|---------|----------|-----------|
+| 1 | Use Case | `DIAGRAMS.md` | `01-use-case-diagram.puml` | Aktor (Mahasiswa, Admin, Finance) dan fitur sistem |
+| 2 | Class | `DIAGRAMS.md` | `02-class-diagram.puml` | Struktur class, model, service, event, policy |
+| 3 | Sequence (Registration) | `DIAGRAMS.md` | `03-sequence-diagram.puml` | Alur registrasi & verifikasi pembayaran |
+| 4 | Activity | `DIAGRAMS.md` | `04-activity-diagram.puml` | Workflow lengkap dari login sampai penilaian |
+| 5 | Sequence (Scoring) | `DIAGRAMS.md` | `05-sequence-scoring-flow.puml` | Alur input nilai oleh Admin/Finance |
+| 6 | Component | `DIAGRAMS.md` | `06-component-diagram.puml` | Arsitektur 4-layer (Presentation → Application → Domain → Infrastructure) |
+| 7 | Data Flow | `DIAGRAMS.md` | `07-data-flow-diagram.puml` | Alir data antar proses dan data store |
 
 ## Cara Render
 
-### Online (Recommended)
+### Mermaid.js (Recommended untuk GitHub)
+
+**Di GitHub:**
+- Diagram Mermaid otomatis di-render di markdown files
+- Tidak perlu additional tools
+- Cukup gunakan code block ` ```mermaid `
+
+**Di VS Code:**
+1. Install extension "Markdown Preview Mermaid Support"
+2. Buka README.md atau DIAGRAMS.md
+3. Press `Ctrl+Shift+V` untuk preview
+
+**Online:**
+1. Buka https://mermaid.live
+2. Copy isi code block ` ```mermaid `
+3. Paste ke editor
+
+### PlantUML
+
+**Online:**
 1. Buka https://www.plantuml.com/plantuml/uml
 2. Copy isi file `.puml`
 3. Paste ke editor online
 4. Diagram akan otomatis di-render
 
-### VS Code
+**VS Code:**
 1. Install extension "PlantUML" by jebbs
 2. Buka file `.puml`
 3. Press `Alt + D` untuk preview
 
-### Command Line
+**Command Line:**
 ```bash
 # Install PlantUML (butuh Java)
 java -jar plantuml.jar *.puml
 
-# Output akan生成 file .png di direktori yang sama
+# Output akan generate file .png di direktori yang sama
 ```
 
 ## Arsitektur Sistem
@@ -112,7 +133,8 @@ PENDING_PAYMENT → AWAITING_VERIFICATION → VERIFIED
 
 ```
 docs/uml/
-├── 01-use-case-diagram.puml
+├── DIAGRAMS.md              # Mermaid diagrams (recommended)
+├── 01-use-case-diagram.puml # PlantUML files (backup)
 ├── 02-class-diagram.puml
 ├── 03-sequence-diagram.puml
 ├── 04-activity-diagram.puml

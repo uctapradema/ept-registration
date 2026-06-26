@@ -22,6 +22,11 @@ class Participants extends Page
     public $registrations;
     public $examScheduleId;
 
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->isAdmin() || auth()->user()?->isFinance();
+    }
+
     public function mount(): void
     {
         $this->examScheduleId = request()->get('exam_schedule_id');

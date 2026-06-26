@@ -174,4 +174,24 @@ class ScoringResource extends Resource
             'index' => Pages\ListScorings::route('/'),
         ];
     }
+
+    public static function canViewAny(): bool
+    {
+        return auth()->user()?->isAdmin() || auth()->user()?->isFinance();
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()?->isAdmin() || auth()->user()?->isFinance();
+    }
+
+    public static function canEdit($record): bool
+    {
+        return auth()->user()?->isAdmin() || auth()->user()?->isFinance();
+    }
+
+    public static function canDelete($record): bool
+    {
+        return auth()->user()?->isAdmin();
+    }
 }

@@ -48,7 +48,7 @@ Route::middleware(['auth', 'mahasiswa'])->prefix('mahasiswa')->name('mahasiswa.'
 });
 
 // Admin Export Routes
-Route::middleware(['auth'])->prefix('admin/participants')->name('admin.participants.')->group(function () {
+Route::middleware(['auth', 'admin'])->prefix('admin/participants')->name('admin.participants.')->group(function () {
     Route::get('/export', [ParticipantExportController::class, 'export'])->name('export');
     Route::get('/print', [ParticipantExportController::class, 'print'])->name('print');
 });

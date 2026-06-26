@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Filters\RegistrationFilters;
 use App\Filament\Resources\ScoringResource\Pages;
 use App\Models\Registration;
 use App\Services\ScoringService;
@@ -97,12 +98,7 @@ class ScoringResource extends Resource
                     ->toggleable(),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('exam_schedule_id')
-                    ->label('Jadwal Ujian')
-                    ->relationship('examSchedule', 'title')
-                    ->searchable()
-                    ->preload()
-                    ->native(false),
+                RegistrationFilters::examScheduleFilter(),
             ])
             ->actions([
                 Tables\Actions\Action::make('input_scores')

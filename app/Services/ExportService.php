@@ -4,11 +4,12 @@ namespace App\Services;
 
 use App\Models\ExamSchedule;
 use App\Models\Registration;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 class ExportService
 {
-    public function getParticipantsQuery(?int $examScheduleId = null)
+    public function getParticipantsQuery(?int $examScheduleId = null): Builder
     {
         $query = Registration::with(['user', 'examSchedule'])
             ->verified()

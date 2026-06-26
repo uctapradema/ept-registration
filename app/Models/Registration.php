@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Constants\AppConstants;
 use App\Enums\RegistrationStatus;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -40,6 +41,7 @@ class Registration extends Model
     protected function casts(): array
     {
         return [
+            'status' => RegistrationStatus::class,
             'payment_uploaded_at' => 'datetime',
             'payment_verified_at' => 'datetime',
             'expires_at' => 'datetime',
@@ -52,6 +54,8 @@ class Registration extends Model
             'ready_for_scoring' => 'boolean',
         ];
     }
+
+    // ─── Relationships ──────────────────────────────────
 
     public function user(): BelongsTo
     {
@@ -73,80 +77,101 @@ class Registration extends Model
         return $this->belongsTo(User::class, 'graded_by');
     }
 
-    public function isExpired(): bool
-    {
-        return $this->expires_at && $this->expires_at->isPast();
-    }
+    // ─── Query Scopes ───────────────────────────────────
 
-    public function scopeReadyForScoring($query)
-    {
-        return $query->where('ready_for_scoring', true)
-            ->whereNull('graded_at');
-    }
-
-    public function scopeGraded($query)
-    {
-        return $query->whereNotNull('graded_at');
-    }
-
-    public function calculateAverageScore(): ?float
-    {
-        if ($this->listening_score !== null && $this->structure_score !== null && $this->reading_score !== null) {
-            return round(($this->listening_score + $this->structure_score + $this->reading_score) / 3, 2);
-        }
-        return null;
-    }
-
-    public function scopeForUser($query, int $userId)
+    public function scopeForUser(Builder $query, int $userId): Builder
     {
         return $query->where('user_id', $userId);
     }
 
-    public function scopeForSchedule($query, int $scheduleId)
+    public function scopeForSchedule(Builder $query, int $scheduleId): Builder
     {
         return $query->where('exam_schedule_id', $scheduleId);
     }
 
-    public function scopeAwaitingVerification($query)
-    {
-        return $query->where('status', RegistrationStatus::AWAITING_VERIFICATION->value);
-    }
-
-    public function scopeVerified($query)
-    {
-        return $query->where('status', RegistrationStatus::VERIFIED->value);
-    }
-
-    public function scopeActive($query)
+    public function scopeActive(Builder $query): Builder
     {
         return $query->whereIn('status', [
-            RegistrationStatus::PENDING_PAYMENT->value,
-            RegistrationStatus::AWAITING_VERIFICATION->value,
-            RegistrationStatus::VERIFIED->value,
+            RegistrationStatus::PENDING_PAYMENT,
+            RegistrationStatus::AWAITING_VERIFICATION,
+            RegistrationStatus::VERIFIED,
         ]);
     }
 
-    public function scopeHistory($query)
+    public function scopeAwaitingVerification(Builder $query): Builder
     {
         return $query->whereIn('status', [
-            RegistrationStatus::VERIFIED->value,
-            RegistrationStatus::REJECTED->value,
-            RegistrationStatus::CANCELLED->value,
-            RegistrationStatus::EXPIRED->value,
+            RegistrationStatus::PENDING_PAYMENT,
+            RegistrationStatus::AWAITING_VERIFICATION,
         ]);
     }
+
+    public function scopeVerified(Builder $query): Builder
+    {
+        return $query->where('status', RegistrationStatus::VERIFIED);
+    }
+
+    public function scopeHistory(Builder $query): Builder
+    {
+        return $query->whereIn('status', [
+            RegistrationStatus::VERIFIED,
+            RegistrationStatus::REJECTED,
+            RegistrationStatus::CANCELLED,
+            RegistrationStatus::EXPIRED,
+        ]);
+    }
+
+    public function scopeReadyForScoring(Builder $query): Builder
+    {
+        return $query->where('status', RegistrationStatus::VERIFIED)
+            ->where(function (Builder $q) {
+                $q->where('ready_for_scoring', true)
+                    ->orWhereNotNull('graded_at');
+            });
+    }
+
+    public function scopeGraded(Builder $query): Builder
+    {
+        return $query->whereNotNull('graded_at');
+    }
+
+    // ─── Business Logic ─────────────────────────────────
+
+    public function isExpired(): bool
+    {
+        return $this->expires_at instanceof \Carbon\Carbon
+            && $this->expires_at->isPast();
+    }
+
+    public function isAwaitingVerification(): bool
+    {
+        return in_array($this->status, [
+            RegistrationStatus::PENDING_PAYMENT,
+            RegistrationStatus::AWAITING_VERIFICATION,
+        ]);
+    }
+
+    public function canBeCancelled(): bool
+    {
+        return $this->isAwaitingVerification();
+    }
+
+    // ─── Accessors ──────────────────────────────────────
 
     public function getTotalPaymentAttribute(): int
     {
         $price = $this->examSchedule->price ?? 0;
+
         return $price + ($this->unique_code ?? 0);
     }
+
+    // ─── Static Helpers ─────────────────────────────────
 
     public static function generateRegistrationNumber(ExamSchedule $schedule): string
     {
         $session = $schedule->session ?? '01';
         $count = self::where('exam_schedule_id', $schedule->id)->count() + 1;
-        
+
         return 'EPT/' . $session . '/' . $schedule->exam_date->format('dmY') . '/' . str_pad($count, 4, '0', STR_PAD_LEFT);
     }
 
@@ -154,7 +179,7 @@ class Registration extends Model
     {
         $min = $schedule->unique_code_min ?? AppConstants::DEFAULT_UNIQUE_CODE_MIN;
         $max = $schedule->unique_code_max ?? AppConstants::DEFAULT_UNIQUE_CODE_MAX;
-        
+
         return rand($min, $max);
     }
 }

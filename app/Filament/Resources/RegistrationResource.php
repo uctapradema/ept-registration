@@ -5,6 +5,8 @@ namespace App\Filament\Resources;
 use App\Enums\RegistrationStatus;
 use App\Filament\Actions\RejectPaymentAction;
 use App\Filament\Actions\VerifyPaymentAction;
+use App\Filament\Columns\RegistrationColumns;
+use App\Filament\Filters\RegistrationFilters;
 use App\Filament\Resources\RegistrationResource\Pages;
 use App\Models\Registration;
 use App\Models\User;
@@ -127,120 +129,60 @@ class RegistrationResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->columns([
-                Tables\Columns\TextColumn::make('registration_number')
-                    ->label('Nomor Pendaftaran')
-                    ->searchable()
-                    ->sortable()
-                    ->copyable(),
-
-                Tables\Columns\TextColumn::make('user.name')
-                    ->label('Peserta')
-                    ->searchable()
-                    ->sortable(),
-
-                Tables\Columns\TextColumn::make('user.nim')
-                    ->label('NIM')
-                    ->searchable()
-                    ->sortable()
-                    ->toggleable(),
-
-                Tables\Columns\TextColumn::make('examSchedule.title')
-                    ->label('Jadwal Ujian')
-                    ->searchable()
-                    ->sortable()
-                    ->limit(30),
-
-                Tables\Columns\TextColumn::make('examSchedule.exam_date')
-                    ->label('Tanggal Ujian')
-                    ->date('d F Y')
-                    ->sortable(),
-
-                Tables\Columns\TextColumn::make('status')
-                    ->label('Status')
-                    ->badge()
-                    ->color(fn (string $state): string => RegistrationStatus::colors()[$state] ?? 'gray')
-                    ->formatStateUsing(fn (string $state): string => RegistrationStatus::options()[$state] ?? $state)
-                    ->sortable(),
-
-                Tables\Columns\TextColumn::make('payment_uploaded_at')
-                    ->label('Upload Pembayaran')
-                    ->dateTime('d F Y, H:i')
-                    ->sortable()
-                    ->toggleable()
-                    ->formatStateUsing(fn ($state) => $state ? \Carbon\Carbon::parse($state)->format('d F Y, H:i') : '-'),
-
-                Tables\Columns\ImageColumn::make('payment_proof')
-                    ->label('Bukti Bayar')
-                    ->disk('public')
-                    ->size(40)
-                    ->circular()
-                    ->toggleable()
-                    ->visible(fn ($record) => $record && $record->payment_proof),
-
-                Tables\Columns\TextColumn::make('payment_verified_at')
-                    ->label('Waktu Verifikasi')
-                    ->dateTime('d F Y, H:i')
-                    ->sortable()
-                    ->toggleable(),
-
-                Tables\Columns\TextColumn::make('verifiedBy.name')
-                    ->label('Diverifikasi Oleh')
-                    ->searchable()
-                    ->sortable()
-                    ->toggleable(),
-
-                Tables\Columns\TextColumn::make('listening_score')
-                    ->label('Listening')
-                    ->numeric()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-
-                Tables\Columns\TextColumn::make('structure_score')
-                    ->label('Structure')
-                    ->numeric()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-
-                Tables\Columns\TextColumn::make('reading_score')
-                    ->label('Reading')
-                    ->numeric()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-
-                Tables\Columns\TextColumn::make('created_at')
-                    ->label('Dibuat')
-                    ->dateTime('d F Y, H:i')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-            ])
-            ->filters([
-                Tables\Filters\SelectFilter::make('status')
-                    ->label('Status')
-                    ->options(RegistrationStatus::options())
-                    ->native(false),
-
-                Tables\Filters\SelectFilter::make('exam_schedule_id')
-                    ->label('Jadwal Ujian')
-                    ->relationship('examSchedule', 'title')
-                    ->searchable()
-                    ->preload()
-                    ->native(false),
-            ])
-            ->actions([
-                VerifyPaymentAction::make(),
-                RejectPaymentAction::make(),
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make()
-                    ->visible(fn (): bool => auth()->user()?->isAdmin() ?? false),
-            ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make()
-                        ->visible(fn (): bool => auth()->user()?->isAdmin() ?? false),
-                ]),
-            ])
+            ->columns(self::getColumns())
+            ->filters(self::getFilters())
+            ->actions(self::getActions())
+            ->bulkActions(self::getBulkActions())
             ->defaultSort('created_at', 'desc');
+    }
+
+    private static function getColumns(): array
+    {
+        return [
+            RegistrationColumns::registrationNumber(),
+            RegistrationColumns::participantName(),
+            RegistrationColumns::participantNim(),
+            RegistrationColumns::examScheduleTitle(),
+            RegistrationColumns::examDate(),
+            RegistrationColumns::statusBadge(),
+            RegistrationColumns::paymentUploadedAt(),
+            RegistrationColumns::paymentProofThumbnail(),
+            RegistrationColumns::paymentVerifiedAt(),
+            RegistrationColumns::verifiedByName(),
+            RegistrationColumns::listeningScore(),
+            RegistrationColumns::structureScore(),
+            RegistrationColumns::readingScore(),
+            RegistrationColumns::createdAt(),
+        ];
+    }
+
+    private static function getFilters(): array
+    {
+        return [
+            RegistrationFilters::statusFilter(),
+            RegistrationFilters::examScheduleFilter(),
+        ];
+    }
+
+    private static function getActions(): array
+    {
+        return [
+            VerifyPaymentAction::make(),
+            RejectPaymentAction::make(),
+            Tables\Actions\ViewAction::make(),
+            Tables\Actions\EditAction::make()
+                ->visible(fn (): bool => auth()->user()?->isAdmin() ?? false),
+        ];
+    }
+
+    private static function getBulkActions(): array
+    {
+        return [
+            Tables\Actions\BulkActionGroup::make([
+                Tables\Actions\DeleteBulkAction::make()
+                    ->visible(fn (): bool => auth()->user()?->isAdmin() ?? false),
+            ]),
+        ];
     }
 
     public static function getEloquentQuery(): Builder

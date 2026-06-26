@@ -2,18 +2,18 @@
 
 namespace App\Http\Controllers\Mahasiswa;
 
-use App\Enums\RegistrationStatus;
+use App\Constants\AppConstants;
 use App\Http\Controllers\Controller;
 use App\Models\Registration;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index(): View
     {
         $user = Auth::user();
-        
+
         $activeRegistration = Registration::with('examSchedule')
             ->forUser($user->id)
             ->active()
@@ -24,7 +24,7 @@ class DashboardController extends Controller
             ->forUser($user->id)
             ->history()
             ->latest()
-            ->take(5)
+            ->take(AppConstants::DASHBOARD_RECENT_LIMIT)
             ->get();
 
         return view('mahasiswa.dashboard', compact('activeRegistration', 'recentRegistrations'));

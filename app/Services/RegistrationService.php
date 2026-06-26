@@ -4,10 +4,10 @@ namespace App\Services;
 
 use App\Constants\AppConstants;
 use App\Enums\RegistrationStatus;
+use App\Events\RegistrationStatusChanged;
 use App\Models\ExamSchedule;
 use App\Models\Registration;
 use App\Models\User;
-use App\Notifications\RegistrationSuccessNotification;
 use Illuminate\Support\Facades\DB;
 
 class RegistrationService
@@ -35,7 +35,7 @@ class RegistrationService
                 'unique_code' => $uniqueCode,
             ]);
 
-            $this->sendNotification($registration, $user);
+            event(new RegistrationStatusChanged($registration, null, RegistrationStatus::PENDING_PAYMENT));
 
             return $registration;
         });
@@ -44,26 +44,28 @@ class RegistrationService
     public function cancelRegistration(Registration $registration, string $reason): void
     {
         DB::transaction(function () use ($registration, $reason) {
+            $oldStatus = $registration->status;
+
             $registration->update([
                 'status' => RegistrationStatus::CANCELLED->value,
                 'rejection_reason' => $reason,
             ]);
+
+            event(new RegistrationStatusChanged($registration, $oldStatus, RegistrationStatus::CANCELLED));
         });
     }
 
     public function uploadPayment(Registration $registration, string $filePath, ?string $note = null): void
     {
+        $oldStatus = $registration->status;
+
         $registration->update([
             'payment_proof' => $filePath,
             'payment_uploaded_at' => now(),
             'status' => RegistrationStatus::AWAITING_VERIFICATION->value,
             'payment_note' => $note,
         ]);
-    }
 
-    private function sendNotification(Registration $registration, User $user): void
-    {
-        $registration->load('examSchedule');
-        $user->notify(new RegistrationSuccessNotification($registration));
+        event(new RegistrationStatusChanged($registration, $oldStatus, RegistrationStatus::AWAITING_VERIFICATION));
     }
 }

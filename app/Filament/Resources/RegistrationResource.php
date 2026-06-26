@@ -50,11 +50,9 @@ class RegistrationResource extends Resource
                             ->label('Peserta')
                             ->options(function () {
                                 return \App\Models\User::where('role', 'mahasiswa')
-                                    ->pluck('name', 'id')
-                                    ->mapWithKeys(function ($name, $id) {
-                                        $user = \App\Models\User::find($id);
-                                        return [$id => "{$name} ({$user->nim})"];
-                                    });
+                                    ->select('id', 'name', 'nim')
+                                    ->get()
+                                    ->mapWithKeys(fn ($user) => [$user->id => "{$user->name} ({$user->nim})"]);
                             })
                             ->searchable()
                             ->preload()

@@ -2,7 +2,8 @@
 
 namespace App\Console\Commands;
 
-use App\Models\ExamSchedule;
+use App\Enums\RegistrationStatus;
+use App\Events\RegistrationStatusChanged;
 use App\Models\Registration;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
@@ -13,23 +14,10 @@ use Throwable;
 
 class CheckExpiredRegistrations extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
     protected $signature = 'registrations:check-expired';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
     protected $description = 'Check and expire registrations that have passed their payment deadline';
 
-    /**
-     * Execute the console command.
-     */
     public function handle(): int
     {
         $now = Carbon::now();
@@ -39,8 +27,8 @@ class CheckExpiredRegistrations extends Command
             DB::beginTransaction();
 
             $expiredRegistrations = Registration::whereIn('status', [
-                'pending_payment',
-                'awaiting_verification',
+                RegistrationStatus::PENDING_PAYMENT,
+                RegistrationStatus::AWAITING_VERIFICATION,
             ])
                 ->where('expires_at', '<', $now)
                 ->lockForUpdate()
@@ -49,9 +37,13 @@ class CheckExpiredRegistrations extends Command
             $this->info("Found {$expiredRegistrations->count()} expired registrations.");
 
             foreach ($expiredRegistrations as $registration) {
+                $oldStatus = $registration->status;
+
                 $registration->update([
-                    'status' => 'expired',
+                    'status' => RegistrationStatus::EXPIRED->value,
                 ]);
+
+                event(new RegistrationStatusChanged($registration, $oldStatus, RegistrationStatus::EXPIRED));
 
                 Log::info('Registration expired', [
                     'registration_id' => $registration->id,
@@ -82,7 +74,6 @@ class CheckExpiredRegistrations extends Command
             Log::error('CheckExpiredRegistrations database error', [
                 'message' => $e->getMessage(),
                 'code' => $e->getCode(),
-                'sql' => $e->getSql() ?? null,
             ]);
 
             return self::FAILURE;
@@ -94,7 +85,6 @@ class CheckExpiredRegistrations extends Command
             Log::error('CheckExpiredRegistrations error', [
                 'message' => $e->getMessage(),
                 'code' => $e->getCode(),
-                'trace' => $e->getTraceAsString(),
             ]);
 
             return self::FAILURE;

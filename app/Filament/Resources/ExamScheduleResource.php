@@ -179,9 +179,9 @@ class ExamScheduleResource extends Resource
                 Tables\Columns\TextColumn::make('quota_info')
                     ->label('Terdaftar')
                     ->html()
-                    ->formatStateUsing(fn (ExamSchedule $record): string => 
-                        '<span class="' . ($record->registeredCount() >= $record->quota ? 'text-danger' : 'text-success') . '">' 
-                        . $record->registeredCount() . ' / ' . $record->quota . '</span>'
+                    ->state(fn (ExamSchedule $record): string =>
+                        '<span class="' . ($record->active_registrations_count >= $record->quota ? 'text-danger' : 'text-success') . '">'
+                        . $record->active_registrations_count . ' / ' . $record->quota . '</span>'
                     ),
 
                 Tables\Columns\TextColumn::make('payment_deadline_hours')
@@ -247,6 +247,20 @@ class ExamScheduleResource extends Resource
                 ]),
             ])
             ->defaultSort('exam_date', 'desc');
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->withCount([
+                'registrations as active_registrations_count' => function ($query) {
+                    $query->whereIn('status', [
+                        \App\Enums\RegistrationStatus::PENDING_PAYMENT,
+                        \App\Enums\RegistrationStatus::AWAITING_VERIFICATION,
+                        \App\Enums\RegistrationStatus::VERIFIED,
+                    ]);
+                },
+            ]);
     }
 
     public static function getRelations(): array

@@ -438,7 +438,7 @@ sequenceDiagram
 
 ### Activity Diagram - Registration Workflow
 
-> **UML Notation:** ● = Initial Node | ⊙ = Activity Final Node | ◇ = Decision/Merge Node | [] = Action | {} = Guard Condition
+> **UML Notation:** ● = Initial Node | ◇ = Decision Node | → = Control Flow | [action] = Action Node
 
 ```mermaid
 flowchart TD
@@ -448,71 +448,71 @@ flowchart TD
     %% Swimlane: Mahasiswa
     subgraph MH[" "]
         direction TB
-        M1[/"Browse Exam Schedules"/]
-        M2[/"Select Schedule"/]
-        M3[/"Fill Registration Form"/]
-        M4[/"Make Bank Transfer"/]
-        M5[/"Upload Payment Proof"/]
-        M6[/"Download Exam Card"/]
-        M7[/"Attend Exam"/]
-        M8[/"Re-upload Payment"/]
+        M1[Browse Exam Schedules]
+        M2[Select Schedule]
+        M3[Fill Registration Form]
+        M4[Make Bank Transfer]
+        M5[Upload Payment Proof]
+        M6[Download Exam Card]
+        M7[Attend Exam]
+        M8[Re-upload Payment]
     end
 
     %% Swimlane: System
     subgraph SY[" "]
         direction TB
-        S1[/"Verify Credentials"/]
-        S2[/"Check Schedule Availability"/]
-        S3[/"Check Active Registration"/]
-        S4[/"Generate Registration Number"/]
-        S5[/"Generate Unique Code"/]
-        S6[/"Create Registration<br/>(status: PENDING_PAYMENT)"/]
-        S7[/"Validate File Upload"/]
-        S8[/"Store Payment Proof"/]
-        S9[/"Update Status<br/>(status: AWAITING_VERIFICATION)"/]
-        S10[/"Check Payment Deadline"/]
-        S11[/"Update Status<br/>(status: EXPIRED)"/]
-        S12[/"Update Status<br/>(status: VERIFIED)"/]
-        S13[/"Set verified_by,<br/>payment_verified_at"/]
-        S14[/"Update Status<br/>(status: REJECTED)"/]
-        S15[/"Set rejection_reason"/]
-        S16[/"Validate Scores<br/>(0-100)"/]
-        S17[/"Calculate Average Score"/]
-        S18[/"Save Scores"/]
-        S19[/"Set graded_by,<br/>graded_at"/]
+        S1[Verify Credentials]
+        S2[Check Schedule Availability]
+        S3[Check Active Registration]
+        S4[Generate Registration Number]
+        S5[Generate Unique Code]
+        S6[Create Registration]
+        S7[Validate File Upload]
+        S8[Store Payment Proof]
+        S9[Update Status to AWAITING_VERIFICATION]
+        S10[Check Payment Deadline]
+        S11[Update Status to EXPIRED]
+        S12[Update Status to VERIFIED]
+        S13[Set verified_by and payment_verified_at]
+        S14[Update Status to REJECTED]
+        S15[Set rejection_reason]
+        S16[Validate Scores 0-100]
+        S17[Calculate Average Score]
+        S18[Save Scores]
+        S19[Set graded_by and graded_at]
     end
 
     %% Swimlane: Admin/Finance
     subgraph AF[" "]
         direction TB
-        A1[/"Review Payment Proof"/]
-        A2[/"Decide: Verify or Reject"/]
-        A3[/"Enter Rejection Reason"/]
-        A4[/"Input Exam Scores"/]
+        A1[Review Payment Proof]
+        A2[Decide Verify or Reject]
+        A3[Enter Rejection Reason]
+        A4[Input Exam Scores]
     end
 
     %% Flow: Initial to Authentication
     start --> S1
-    S1 -->|{Valid?}| D1{◇}
+    S1 --> D1{Valid?}
 
     %% Decision: Valid Credentials
-    D1 -->|No| E1[/"Show Error Message"/]
+    D1 -->|No| E1[Show Error Message]
     D1 -->|Yes| M1
 
     %% Flow: Browse to Register
     M1 --> M2
     M2 --> S2
-    S2 -->|{Available?}| D2{◇}
+    S2 --> D2{Available?}
 
     %% Decision: Schedule Available
-    D2 -->|No| E2[/"Show Error Message"/]
+    D2 -->|No| E2[Show Error Message]
     D2 -->|Yes| S3
 
     %% Check Active Registration
-    S3 -->|{Has Active?}| D3{◇}
+    S3 --> D3{Has Active?}
 
     %% Decision: Has Active Registration
-    D3 -->|Yes| E3[/"Show Warning:<br/>Redirect to Existing"/]
+    D3 -->|Yes| E3[Show Warning Redirect to Existing]
     D3 -->|No| M3
 
     %% Registration Flow
@@ -524,17 +524,17 @@ flowchart TD
     %% Payment Upload Flow
     M4 --> M5
     M5 --> S7
-    S7 -->|{Valid File?}| D4{◇}
+    S7 --> D4{Valid File?}
 
     %% Decision: Valid File
-    D4 -->|No| E4[/"Show Error Message"/]
+    D4 -->|No| E4[Show Error Message]
     D4 -->|Yes| S8
 
     S8 --> S9
     S9 --> S10
 
     %% Check Payment Deadline
-    S10 -->|{Expired?}| D5{◇}
+    S10 --> D5{Expired?}
 
     %% Decision: Payment Expired
     D5 -->|Yes| S11
@@ -542,7 +542,7 @@ flowchart TD
 
     %% Admin/Finance Verification
     A1 --> A2
-    A2 -->|{Decision?}| D6{◇}
+    A2 --> D6{Decision?}
 
     %% Decision: Verify or Reject
     D6 -->|Verify| S12
@@ -556,10 +556,10 @@ flowchart TD
 
     %% Scoring Flow
     A4 --> S16
-    S16 -->|{Valid Scores?}| D7{◇}
+    S16 --> D7{Valid Scores?}
 
     %% Decision: Valid Scores
-    D7 -->|No| E5[/"Show Error:<br/>Scores out of range"/]
+    D7 -->|No| E5[Show Error Scores out of range]
     D7 -->|Yes| S17
 
     S17 --> S18

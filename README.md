@@ -438,35 +438,171 @@ sequenceDiagram
 
 ### Activity Diagram - Registration Workflow
 
+> **UML Notation:** ● = Initial Node | ⊙ = Activity Final Node | ◇ = Decision/Merge Node | [] = Action | {} = Guard Condition
+
 ```mermaid
 flowchart TD
-    Start((Start)) --> M_Login[Mahasiswa: Login]
-    M_Login --> S_Verify[System: Verify credentials]
-    S_Verify -->|Invalid| S_Error[System: Show error]
-    S_Error --> Stop1((Stop))
-    S_Verify -->|Valid| M_Browse[Mahasiswa: Browse Schedules]
-    M_Browse --> S_CheckQuota[System: Check quota]
-    S_CheckQuota -->|Available| M_Register[Mahasiswa: Register]
-    S_CheckQuota -->|Not available| S_ErrorMsg[System: Show error]
-    S_ErrorMsg --> Stop2((Stop))
-    M_Register --> S_CreateReg[System: Create registration]
-    S_CreateReg --> M_Upload[Mahasiswa: Upload payment]
-    M_Upload --> S_WaitVerify[System: Await verification]
-    S_WaitVerify --> A_Verify[Admin/Finance: Verify]
-    A_Verify -->|Verified| S_Verified[System: Status = VERIFIED]
-    S_Verified --> M_Download[Mahasiswa: Download card]
-    M_Download --> M_Exam[Mahasiswa: Attend exam]
-    A_Verify -->|Rejected| S_Rejected[System: Status = REJECTED]
-    S_Rejected --> M_ReUpload[Mahasiswa: Re-upload payment]
-    M_ReUpload --> M_Upload
-    M_Exam --> A_Score[Admin/Finance: Input scores]
-    A_Score --> S_SaveScores[System: Save scores]
-    S_SaveScores --> Stop3((Stop))
+    %% Initial Node
+    start((●))
 
-    style Start fill:#4CAF50,color:#fff
-    style Stop1 fill:#f44336,color:#fff
-    style Stop2 fill:#f44336,color:#fff
-    style Stop3 fill:#2196F3,color:#fff
+    %% Swimlane: Mahasiswa
+    subgraph MH[" "]
+        direction TB
+        M1[/"Browse Exam Schedules"/]
+        M2[/"Select Schedule"/]
+        M3[/"Fill Registration Form"/]
+        M4[/"Make Bank Transfer"/]
+        M5[/"Upload Payment Proof"/]
+        M6[/"Download Exam Card"/]
+        M7[/"Attend Exam"/]
+        M8[/"Re-upload Payment"/]
+    end
+
+    %% Swimlane: System
+    subgraph SY[" "]
+        direction TB
+        S1[/"Verify Credentials"/]
+        S2[/"Check Schedule Availability"/]
+        S3[/"Check Active Registration"/]
+        S4[/"Generate Registration Number"/]
+        S5[/"Generate Unique Code"/]
+        S6[/"Create Registration<br/>(status: PENDING_PAYMENT)"/]
+        S7[/"Validate File Upload"/]
+        S8[/"Store Payment Proof"/]
+        S9[/"Update Status<br/>(status: AWAITING_VERIFICATION)"/]
+        S10[/"Check Payment Deadline"/]
+        S11[/"Update Status<br/>(status: EXPIRED)"/]
+        S12[/"Update Status<br/>(status: VERIFIED)"/]
+        S13[/"Set verified_by,<br/>payment_verified_at"/]
+        S14[/"Update Status<br/>(status: REJECTED)"/]
+        S15[/"Set rejection_reason"/]
+        S16[/"Validate Scores<br/>(0-100)"/]
+        S17[/"Calculate Average Score"/]
+        S18[/"Save Scores"/]
+        S19[/"Set graded_by,<br/>graded_at"/]
+    end
+
+    %% Swimlane: Admin/Finance
+    subgraph AF[" "]
+        direction TB
+        A1[/"Review Payment Proof"/]
+        A2[/"Decide: Verify or Reject"/]
+        A3[/"Enter Rejection Reason"/]
+        A4[/"Input Exam Scores"/]
+    end
+
+    %% Flow: Initial to Authentication
+    start --> S1
+    S1 -->|{Valid?}| D1{◇}
+
+    %% Decision: Valid Credentials
+    D1 -->|No| E1[/"Show Error Message"/]
+    D1 -->|Yes| M1
+
+    %% Flow: Browse to Register
+    M1 --> M2
+    M2 --> S2
+    S2 -->|{Available?}| D2{◇}
+
+    %% Decision: Schedule Available
+    D2 -->|No| E2[/"Show Error Message"/]
+    D2 -->|Yes| S3
+
+    %% Check Active Registration
+    S3 -->|{Has Active?}| D3{◇}
+
+    %% Decision: Has Active Registration
+    D3 -->|Yes| E3[/"Show Warning:<br/>Redirect to Existing"/]
+    D3 -->|No| M3
+
+    %% Registration Flow
+    M3 --> S4
+    S4 --> S5
+    S5 --> S6
+    S6 --> M4
+
+    %% Payment Upload Flow
+    M4 --> M5
+    M5 --> S7
+    S7 -->|{Valid File?}| D4{◇}
+
+    %% Decision: Valid File
+    D4 -->|No| E4[/"Show Error Message"/]
+    D4 -->|Yes| S8
+
+    S8 --> S9
+    S9 --> S10
+
+    %% Check Payment Deadline
+    S10 -->|{Expired?}| D5{◇}
+
+    %% Decision: Payment Expired
+    D5 -->|Yes| S11
+    D5 -->|No| A1
+
+    %% Admin/Finance Verification
+    A1 --> A2
+    A2 -->|{Decision?}| D6{◇}
+
+    %% Decision: Verify or Reject
+    D6 -->|Verify| S12
+    D6 -->|Reject| A3
+
+    %% Verified Path
+    S12 --> S13
+    S13 --> M6
+    M6 --> M7
+    M7 --> A4
+
+    %% Scoring Flow
+    A4 --> S16
+    S16 -->|{Valid Scores?}| D7{◇}
+
+    %% Decision: Valid Scores
+    D7 -->|No| E5[/"Show Error:<br/>Scores out of range"/]
+    D7 -->|Yes| S17
+
+    S17 --> S18
+    S18 --> S19
+    S19 --> finish((⊙))
+
+    %% Rejected Path
+    A3 --> S14
+    S14 --> S15
+    S15 --> M8
+    M8 --> M5
+
+    %% Expired Path
+    S11 --> finish2((⊗))
+
+    %% Error Paths
+    E1 --> finish3((⊗))
+    E2 --> finish4((⊗))
+    E3 --> finish5((⊗))
+    E4 --> finish6((⊗))
+    E5 --> finish7((⊗))
+
+    %% Styling
+    style start fill:#000,color:#fff,stroke:#000,stroke-width:4px
+    style finish fill:#fff,color:#000,stroke:#000,stroke-width:4px
+    style finish2 fill:#fff,color:#000,stroke:#000,stroke-width:4px
+    style finish3 fill:#fff,color:#000,stroke:#000,stroke-width:4px
+    style finish4 fill:#fff,color:#000,stroke:#000,stroke-width:4px
+    style finish5 fill:#fff,color:#000,stroke:#000,stroke-width:4px
+    style finish6 fill:#fff,color:#000,stroke:#000,stroke-width:4px
+    style finish7 fill:#fff,color:#000,stroke:#000,stroke-width:4px
+
+    style D1 fill:#FFD700,color:#000,stroke:#000
+    style D2 fill:#FFD700,color:#000,stroke:#000
+    style D3 fill:#FFD700,color:#000,stroke:#000
+    style D4 fill:#FFD700,color:#000,stroke:#000
+    style D5 fill:#FFD700,color:#000,stroke:#000
+    style D6 fill:#FFD700,color:#000,stroke:#000
+    style D7 fill:#FFD700,color:#000,stroke:#000
+
+    style MH fill:#E3F2FD,stroke:#1565C0,stroke-width:2px
+    style SY fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px
+    style AF fill:#FFF3E0,stroke:#E65100,stroke-width:2px
 ```
 
 ### Component Diagram - Architecture

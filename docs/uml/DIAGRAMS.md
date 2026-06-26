@@ -386,91 +386,171 @@ sequenceDiagram
 
 ## 4. Activity Diagram - Registration Workflow
 
+> **UML Notation:** ● = Initial Node | ⊙ = Activity Final Node | ⊗ = Flow Final Node | ◇ = Decision/Merge Node | [] = Action | {} = Guard Condition
+
 ```mermaid
 flowchart TD
-    Start((Start)) --> M_Open[Mahasiswa: Open EPT Website]
-    M_Open --> M_Login[Mahasiswa: Login with credentials]
+    %% Initial Node
+    start((●))
 
-    M_Login --> S_Verify[System: Verify credentials]
-    S_Verify -->|Invalid| S_Error[System: Show error message]
-    S_Error --> Stop1((Stop))
-    S_Verify -->|Valid| S_Session[System: Create session]
+    %% Swimlane: Mahasiswa
+    subgraph MH[" "]
+        direction TB
+        M1[/"Browse Exam Schedules"/]
+        M2[/"Select Schedule"/]
+        M3[/"Fill Registration Form"/]
+        M4[/"Make Bank Transfer"/]
+        M5[/"Upload Payment Proof"/]
+        M6[/"Download Exam Card"/]
+        M7[/"Attend Exam"/]
+        M8[/"Re-upload Payment"/]
+    end
 
-    S_Session --> M_Dash[Mahasiswa: View Dashboard]
-    M_Dash --> M_Browse[Mahasiswa: Browse Exam Schedules]
+    %% Swimlane: System
+    subgraph SY[" "]
+        direction TB
+        S1[/"Verify Credentials"/]
+        S2[/"Check Schedule Availability"/]
+        S3[/"Check Active Registration"/]
+        S4[/"Generate Registration Number"/]
+        S5[/"Generate Unique Code"/]
+        S6[/"Create Registration<br/>(status: PENDING_PAYMENT)"/]
+        S7[/"Validate File Upload"/]
+        S8[/"Store Payment Proof"/]
+        S9[/"Update Status<br/>(status: AWAITING_VERIFICATION)"/]
+        S10[/"Check Payment Deadline"/]
+        S11[/"Update Status<br/>(status: EXPIRED)"/]
+        S12[/"Update Status<br/>(status: VERIFIED)"/]
+        S13[/"Set verified_by,<br/>payment_verified_at"/]
+        S14[/"Update Status<br/>(status: REJECTED)"/]
+        S15[/"Set rejection_reason"/]
+        S16[/"Validate Scores<br/>(0-100)"/]
+        S17[/"Calculate Average Score"/]
+        S18[/"Save Scores"/]
+        S19[/"Set graded_by,<br/>graded_at"/]
+    end
 
-    M_Browse --> S_Query[System: Query active schedules]
-    S_Query --> S_CheckDead[System: Check registration deadline]
-    S_CheckDead --> S_CheckQuota[System: Check available quota]
+    %% Swimlane: Admin/Finance
+    subgraph AF[" "]
+        direction TB
+        A1[/"Review Payment Proof"/]
+        A2[/"Decide: Verify or Reject"/]
+        A3[/"Enter Rejection Reason"/]
+        A4[/"Input Exam Scores"/]
+    end
 
-    S_CheckQuota --> M_Select[Mahasiswa: Select schedule]
-    M_Select --> M_Click[Mahasiswa: Click Register]
+    %% Flow: Initial to Authentication
+    start --> S1
+    S1 -->|{Valid?}| D1{◇}
 
-    M_Click --> S_CheckActive[System: Check if user has active registration]
-    S_CheckActive -->|Has active| S_Warn[System: Show warning message]
-    S_Warn --> Stop2((Stop))
-    S_CheckActive -->|No active| S_CheckAvail[System: Check schedule availability]
+    %% Decision: Valid Credentials
+    D1 -->|No| E1[/"Show Error Message"/]
+    D1 -->|Yes| M1
 
-    S_CheckAvail -->|Not available| S_ErrorMsg[System: Show error message]
-    S_ErrorMsg --> Stop3((Stop))
-    S_CheckAvail -->|Available| S_GenRegNum[System: Generate registration number]
-    S_GenRegNum --> S_GenCode[System: Generate unique code]
-    S_GenCode --> S_CreateReg[System: Create registration]
-    S_CreateReg --> S_SetDeadline[System: Set payment deadline]
-    S_SetDeadline --> S_Dispatch1[System: Dispatch RegistrationStatusChanged event]
-    S_Dispatch1 --> S_SendEmail1[System: Send RegistrationSuccessNotification email]
+    %% Flow: Browse to Register
+    M1 --> M2
+    M2 --> S2
+    S2 -->|{Available?}| D2{◇}
 
-    S_SendEmail1 --> M_ViewReg[Mahasiswa: View registration details]
-    M_ViewReg --> M_Note[Mahasiswa: Note unique code and total payment]
-    M_Note --> M_Transfer[Mahasiswa: Make bank transfer]
+    %% Decision: Schedule Available
+    D2 -->|No| E2[/"Show Error Message"/]
+    D2 -->|Yes| S3
 
-    M_Transfer --> M_Upload[Mahasiswa: Upload payment proof]
-    M_Upload --> M_AddNote[Mahasiswa: Add payment note optional]
-    M_AddNote --> S_Validate[System: Validate file upload]
-    S_Validate --> S_StoreFile[System: Store payment proof file]
-    S_StoreFile --> S_UpdateStatus1[System: Update registration]
-    S_UpdateStatus1 --> S_Dispatch2[System: Dispatch RegistrationStatusChanged event]
+    %% Check Active Registration
+    S3 -->|{Has Active?}| D3{◇}
 
-    S_Dispatch2 --> A_View[Admin/Finance: View RegistrationResource table]
-    A_View --> A_Review[Admin/Finance: Review payment proof]
-    A_Review --> A_Click[Admin/Finance: Click Verifikasi or Tolak]
+    %% Decision: Has Active Registration
+    D3 -->|Yes| E3[/"Show Warning:<br/>Redirect to Existing"/]
+    D3 -->|No| M3
 
-    A_Click -->|Verify| S_UpdateVerified[System: Update status to VERIFIED]
-    S_UpdateVerified --> S_SetVerified[System: Set verified_by, payment_verified_at]
-    S_SetVerified --> S_Dispatch3[System: Dispatch event]
-    S_Dispatch3 --> S_SendEmail2[System: Send PaymentVerifiedNotification email]
+    %% Registration Flow
+    M3 --> S4
+    S4 --> S5
+    S5 --> S6
+    S6 --> M4
 
-    S_SendEmail2 --> M_ReceiveOK[Mahasiswa: Receive verification email]
-    M_ReceiveOK --> M_Download[Mahasiswa: Download Exam Card PDF]
-    M_Download --> M_Attend[Mahasiswa: Attend exam]
+    %% Payment Upload Flow
+    M4 --> M5
+    M5 --> S7
+    S7 -->|{Valid File?}| D4{◇}
 
-    M_Attend --> A_Score[Admin/Finance: Input exam scores]
-    A_Score --> S_ValidateScore[System: Validate scores 0-100]
-    S_ValidateScore --> S_CalcAvg[System: Calculate average score]
-    S_CalcAvg --> S_UpdateScores[System: Update registration with scores]
-    S_UpdateScores --> S_SetGraded[System: Set graded_by, graded_at]
+    %% Decision: Valid File
+    D4 -->|No| E4[/"Show Error Message"/]
+    D4 -->|Yes| S8
 
-    A_Click -->|Reject| A_Reason[Admin/Finance: Enter rejection reason]
-    A_Reason --> S_UpdateRejected[System: Update status to REJECTED]
-    S_UpdateRejected --> S_SetReason[System: Set rejection_reason]
-    S_SetReason --> S_Dispatch4[System: Dispatch event]
-    S_Dispatch4 --> S_SendEmail3[System: Send PaymentRejectedNotification email]
-    S_SendEmail3 --> M_ReceiveReject[Mahasiswa: Receive rejection email]
-    M_ReceiveReject --> M_ReUpload[Mahasiswa: Re-upload payment proof]
-    M_ReUpload --> M_Upload
+    S8 --> S9
+    S9 --> S10
 
-    S_SetGraded --> S_CheckExpired[System: Check expired registrations hourly]
-    S_CheckExpired -->|Deadline passed| S_UpdateExpired[System: Update status to EXPIRED]
-    S_UpdateExpired --> S_Dispatch5[System: Dispatch event]
-    S_Dispatch5 --> Stop4((Stop))
-    S_CheckExpired -->|Not expired| Stop5((Stop))
+    %% Check Payment Deadline
+    S10 -->|{Expired?}| D5{◇}
 
-    style Start fill:#4CAF50,color:#fff
-    style Stop1 fill:#f44336,color:#fff
-    style Stop2 fill:#f44336,color:#fff
-    style Stop3 fill:#f44336,color:#fff
-    style Stop4 fill:#2196F3,color:#fff
-    style Stop5 fill:#2196F3,color:#fff
+    %% Decision: Payment Expired
+    D5 -->|Yes| S11
+    D5 -->|No| A1
+
+    %% Admin/Finance Verification
+    A1 --> A2
+    A2 -->|{Decision?}| D6{◇}
+
+    %% Decision: Verify or Reject
+    D6 -->|Verify| S12
+    D6 -->|Reject| A3
+
+    %% Verified Path
+    S12 --> S13
+    S13 --> M6
+    M6 --> M7
+    M7 --> A4
+
+    %% Scoring Flow
+    A4 --> S16
+    S16 -->|{Valid Scores?}| D7{◇}
+
+    %% Decision: Valid Scores
+    D7 -->|No| E5[/"Show Error:<br/>Scores out of range"/]
+    D7 -->|Yes| S17
+
+    S17 --> S18
+    S18 --> S19
+    S19 --> finish((⊙))
+
+    %% Rejected Path
+    A3 --> S14
+    S14 --> S15
+    S15 --> M8
+    M8 --> M5
+
+    %% Expired Path
+    S11 --> finish2((⊗))
+
+    %% Error Paths
+    E1 --> finish3((⊗))
+    E2 --> finish4((⊗))
+    E3 --> finish5((⊗))
+    E4 --> finish6((⊗))
+    E5 --> finish7((⊗))
+
+    %% Styling
+    style start fill:#000,color:#fff,stroke:#000,stroke-width:4px
+    style finish fill:#fff,color:#000,stroke:#000,stroke-width:4px
+    style finish2 fill:#fff,color:#000,stroke:#000,stroke-width:4px
+    style finish3 fill:#fff,color:#000,stroke:#000,stroke-width:4px
+    style finish4 fill:#fff,color:#000,stroke:#000,stroke-width:4px
+    style finish5 fill:#fff,color:#000,stroke:#000,stroke-width:4px
+    style finish6 fill:#fff,color:#000,stroke:#000,stroke-width:4px
+    style finish7 fill:#fff,color:#000,stroke:#000,stroke-width:4px
+
+    style D1 fill:#FFD700,color:#000,stroke:#000
+    style D2 fill:#FFD700,color:#000,stroke:#000
+    style D3 fill:#FFD700,color:#000,stroke:#000
+    style D4 fill:#FFD700,color:#000,stroke:#000
+    style D5 fill:#FFD700,color:#000,stroke:#000
+    style D6 fill:#FFD700,color:#000,stroke:#000
+    style D7 fill:#FFD700,color:#000,stroke:#000
+
+    style MH fill:#E3F2FD,stroke:#1565C0,stroke-width:2px
+    style SY fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px
+    style AF fill:#FFF3E0,stroke:#E65100,stroke-width:2px
 ```
 
 ---
